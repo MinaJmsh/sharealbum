@@ -1,5 +1,16 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import Gallery from "./pages/Gallery";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import MyMedia from "./pages/MyMedia";
+import MyEvent from "./pages/MyEvent";
+import Upload from "./pages/Upload";
+import CreateEvent from "./pages/CreateEvent";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import NotFound from "./pages/NotFound";
+
 function App() {
   return (
     <BrowserRouter>
@@ -18,3 +29,5 @@ function App() {
     </BrowserRouter>
   );
 }
+
+export default App;
