@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 import Gallery from "./pages/Gallery";
 import Login from "./pages/Login";
@@ -13,20 +15,67 @@ import NotFound from "./pages/NotFound";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/ceremony/:id" element={<Gallery />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/ceremony/:id/my-media" element={<MyMedia />} />
-        <Route path="/ceremony/:id/manage" element={<MyEvent />} />
-        <Route path="/ceremony/:id/upload" element={<Upload />} />
-        <Route path="/ceremony/create" element={<CreateEvent />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/ceremony/:id" element={<Gallery />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="*" element={<NotFound />} />
+
+          {/* Protected */}
+          <Route
+            path="/ceremony/:id/my-media"
+            element={
+              <ProtectedRoute>
+                <MyMedia />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ceremony/:id/manage"
+            element={
+              <ProtectedRoute>
+                <MyEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ceremony/:id/upload"
+            element={
+              <ProtectedRoute>
+                <Upload />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ceremony/create"
+            element={
+              <ProtectedRoute>
+                <CreateEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
