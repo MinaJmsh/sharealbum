@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { SpinnerDotted } from "spinners-react";
 import Loader from "../components/common/Loader";
 
 // ── Avatar ─────────────────────────────────────────────────────
@@ -642,12 +641,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
             className="flex items-center justify-center"
             style={{ minHeight: "40vh" }}
           >
-            {/* <SpinnerDotted
-              size={56}
-              thickness={180}
-              speed={112}
-              color="rgba(212, 184, 150, 1)"
-            /> */}
             {/* <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" /> */}
             <Loader />
           </div>
