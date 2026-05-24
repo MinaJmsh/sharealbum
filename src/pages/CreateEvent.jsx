@@ -64,14 +64,24 @@ function QRDialog({ ceremony, onClose }) {
   function downloadQR() {
     const svg = qrRef.current?.querySelector("svg");
     if (!svg) return;
+    const size = 400;
     const data = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([data], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${ceremony.name.replace(/\s+/g, "-")}-qr.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `${ceremony.name.replace(/\s+/g, "-")}-qr.png`;
+      a.click();
+    };
+    img.src =
+      "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(data)));
   }
 
   async function shareQR() {
@@ -189,7 +199,7 @@ function QRDialog({ ceremony, onClose }) {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"
+                d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
               />
             </svg>
             Go to event gallery
@@ -559,7 +569,7 @@ export default function CreateEvent() {
                 Sets the colour accent for your event gallery.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {THEMES.map((t) => (
                 <button
                   key={t.value}

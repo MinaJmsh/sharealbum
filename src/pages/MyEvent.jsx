@@ -28,14 +28,24 @@ function QRSheet({ ceremony, onClose }) {
   function downloadQR() {
     const svg = qrRef.current?.querySelector("svg");
     if (!svg) return;
+    const size = 400;
     const data = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([data], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${ceremony.name.replace(/\s+/g, "-")}-qr.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `${ceremony.name.replace(/\s+/g, "-")}-qr.png`;
+      a.click();
+    };
+    img.src =
+      "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(data)));
   }
 
   async function shareQR() {
@@ -687,7 +697,7 @@ export default function MyEvent() {
                   Colour accent displayed in your gallery.
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {THEMES.map((t) => (
                   <button
                     key={t.value}
