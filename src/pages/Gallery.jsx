@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { SpinnerDotted } from "spinners-react";
+import Loader from "../components/common/Loader";
 
 // ── Avatar ─────────────────────────────────────────────────────
 function Avatar({ name, size = 28 }) {
@@ -647,7 +648,8 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
               speed={112}
               color="rgba(212, 184, 150, 1)"
             /> */}
-            <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+            {/* <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" /> */}
+            <Loader />
           </div>
         )}
 
@@ -677,6 +679,11 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
                 alt=""
                 className="max-h-[75vh] max-w-full rounded-2xl shadow-glass-lg object-contain mx-auto block"
                 onLoad={() => setMediaLoaded(true)}
+                // onLoad={() => {
+                //   setTimeout(() => {
+                //     setMediaLoaded(true);
+                //   }, 2000);
+                // }}
               />
             )}
           </div>
