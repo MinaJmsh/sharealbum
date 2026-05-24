@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { SpinnerDotted } from "spinners-react";
 
 // ── Avatar ─────────────────────────────────────────────────────
 function Avatar({ name, size = 28 }) {
@@ -54,11 +55,9 @@ function MasonryGrid({ items, onOpenLightbox }) {
     return () => ro.disconnect();
   }, []);
 
-  // Distribute items into columns (shortest-column-first)
   const cols = Array.from({ length: columns }, () => []);
   const heights = Array(columns).fill(0);
   items.forEach((item, idx) => {
-    // Estimate height: use a stored natural ratio or default
     const ratio = item._ratio || 1;
     const shortest = heights.indexOf(Math.min(...heights));
     cols[shortest].push({ item, idx });
@@ -92,20 +91,12 @@ function MasonryCard({ item, onClick }) {
   const [naturalRatio, setNaturalRatio] = useState(item._ratio || null);
   const isVideo = item.file_type === "video";
 
-  // Fetch uploader name once
   useEffect(() => {
     if (!item.uploader_id) return;
-
     supabase
-      .rpc("get_user_display_name", {
-        user_id: item.uploader_id,
-      })
+      .rpc("get_user_display_name", { user_id: item.uploader_id })
       .then(({ data, error }) => {
-        if (!error && data) {
-          setUploader(data);
-        } else {
-          setUploader("Guest");
-        }
+        setUploader(!error && data ? data : "Guest");
       });
   }, [item.uploader_id]);
 
@@ -114,7 +105,7 @@ function MasonryCard({ item, onClick }) {
     const w = el.naturalWidth || el.videoWidth || 1;
     const h = el.naturalHeight || el.videoHeight || 1;
     if (w && h) {
-      item._ratio = h / w; // cache on item object
+      item._ratio = h / w;
       setNaturalRatio(h / w);
     }
     setLoaded(true);
@@ -131,13 +122,10 @@ function MasonryCard({ item, onClick }) {
       onMouseLeave={() => setHovered(false)}
     >
       <div className="relative w-full rounded-2xl overflow-hidden bg-parchment shadow-soft">
-        {/* Aspect-ratio box */}
         <div style={{ position: "relative", width: "100%", paddingTop }}>
-          {/* Shimmer while loading */}
           {!loaded && !errored && (
             <div className="skeleton absolute inset-0 rounded-2xl" />
           )}
-
           {errored ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-text-sm bg-parchment/60">
               <svg
@@ -184,7 +172,6 @@ function MasonryCard({ item, onClick }) {
           )}
         </div>
 
-        {/* Hover overlay */}
         <div
           className="absolute inset-0 transition-all duration-250 rounded-2xl pointer-events-none"
           style={{
@@ -192,7 +179,6 @@ function MasonryCard({ item, onClick }) {
           }}
         />
 
-        {/* Video badge */}
         {isVideo && loaded && (
           <div className="absolute top-2 left-2">
             <span className="badge-gold text-[10px] px-2 py-0.5 flex items-center gap-1">
@@ -204,7 +190,6 @@ function MasonryCard({ item, onClick }) {
           </div>
         )}
 
-        {/* Uploader tooltip — slides up on hover */}
         <div
           className="absolute bottom-0 left-0 right-0 px-2.5 py-2 flex items-center gap-2 transition-all duration-250"
           style={{
@@ -234,7 +219,6 @@ function MasonryCard({ item, onClick }) {
 
 // ── Skeleton masonry ───────────────────────────────────────────
 function SkeletonMasonry({ count = 12 }) {
-  // Random-ish heights for visual interest
   const ratios = [1.2, 0.75, 1, 1.5, 0.8, 1.1, 0.9, 1.3, 0.7, 1, 1.4, 0.85];
   const [columns, setColumns] = useState(3);
   const ref = useRef(null);
@@ -277,74 +261,351 @@ function SkeletonMasonry({ count = 12 }) {
 function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
   const [closing, setClosing] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [uploader, setUploader] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [shareToast, setShareToast] = useState(false);
 
-  // Open animation
+  // Swipe state
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const swipeDeltaX = useRef(0);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const isVideo = item.file_type === "video";
+  const lightboxRef = useRef(null);
+
+  // Non-passive touchmove: prevents the gallery page scrolling during horizontal swipes
+  useEffect(() => {
+    const el = lightboxRef.current;
+    if (!el) return;
+    function blockScroll(e) {
+      if (touchStartX.current === null) return;
+      const dx = e.touches[0].clientX - touchStartX.current;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (Math.abs(dx) > Math.abs(dy)) e.preventDefault();
+    }
+    el.addEventListener("touchmove", blockScroll, { passive: false });
+    return () => el.removeEventListener("touchmove", blockScroll);
+  }, []);
+
+  // Reset on item change
+  useEffect(() => {
+    setMediaLoaded(false);
+    setZoom(1);
+    setSwipeOffset(0);
+  }, [item.id]);
+
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
+
+  // Lock body scroll while lightbox is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!item.uploader_id) return;
+    setUploader(null);
+    supabase
+      .rpc("get_user_display_name", { user_id: item.uploader_id })
+      .then(({ data, error }) => {
+        setUploader(!error && data ? data : "Guest");
+      });
+  }, [item.uploader_id]);
+
+  const uploadedAt = item.created_at
+    ? new Date(item.created_at).toLocaleString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   function triggerClose() {
     setClosing(true);
     setTimeout(onClose, 280);
   }
 
+  // Keyboard nav
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") triggerClose();
       if (e.key === "ArrowLeft" && hasPrev) onPrev();
       if (e.key === "ArrowRight" && hasNext) onNext();
+      if (e.key === "+" || e.key === "=") setZoom((z) => Math.min(z + 0.25, 3));
+      if (e.key === "-") setZoom((z) => Math.max(z - 0.25, 1));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [hasPrev, hasNext, onPrev, onNext]);
 
+  // Touch swipe handlers
+  function handleTouchStart(e) {
+    if (zoom > 1) return; // disable swipe when zoomed
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    swipeDeltaX.current = 0;
+  }
+  function handleTouchMove(e) {
+    if (zoom > 1 || touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    // Only track horizontal swipes
+    if (Math.abs(dx) > Math.abs(dy)) {
+      swipeDeltaX.current = dx;
+      setSwipeOffset(dx);
+    }
+  }
+  function handleTouchEnd() {
+    if (zoom > 1) return;
+    const threshold = 60;
+    if (swipeDeltaX.current < -threshold && hasNext) {
+      onNext();
+    } else if (swipeDeltaX.current > threshold && hasPrev) {
+      onPrev();
+    }
+    setSwipeOffset(0);
+    touchStartX.current = null;
+    swipeDeltaX.current = 0;
+  }
+
+  // Download
+  async function handleDownload() {
+    try {
+      const response = await fetch(item.file_url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = isVideo ? "mp4" : "jpg";
+      a.download = `memory-${item.id}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(item.file_url, "_blank");
+    }
+  }
+
+  // Share
+  async function handleShare() {
+    const shareData = { url: item.file_url };
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(item.file_url);
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2200);
+    }
+  }
+
   const backdropStyle = {
     opacity: visible && !closing ? 1 : 0,
     transition: "opacity 0.28s ease",
   };
-  const mediaStyle = {
-    opacity: visible && !closing ? 1 : 0,
+  const mediaWrapStyle = {
+    opacity:
+      visible && !closing
+        ? swipeOffset !== 0
+          ? Math.max(0.35, 1 - Math.abs(swipeOffset) / 260)
+          : 1
+        : 0,
     transform:
       visible && !closing
         ? "scale(1) translateY(0)"
         : "scale(0.93) translateY(20px)",
     transition:
-      "opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.4,0.64,1)",
+      swipeOffset !== 0
+        ? "opacity 0.12s ease"
+        : "opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.4,0.64,1)",
+  };
+
+  // Toolbar button style helper
+  const toolBtn = {
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,252,248,0.12)",
+    border: "1px solid rgba(255,252,248,0.18)",
+    backdropFilter: "blur(8px)",
+    color: "rgba(250,247,242,0.88)",
+    cursor: "pointer",
+    transition: "background 0.2s, transform 0.15s",
+    flexShrink: 0,
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-      style={{ ...backdropStyle, background: "rgba(46,37,32,0.72)" }}
+      ref={lightboxRef}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center backdrop-blur-sm"
+      style={{ ...backdropStyle, background: "rgba(46,37,32,0.82)" }}
       onClick={triggerClose}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Close */}
-      <button
-        className="absolute top-4 right-4 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors z-10"
-        onClick={triggerClose}
-        aria-label="Close"
+      {/* ── Top bar: close + toolbar ── */}
+      <div
+        className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-4 pb-3"
         style={{
+          background:
+            "linear-gradient(to bottom, rgba(46,37,32,0.5) 0%, transparent 100%)",
           opacity: visible && !closing ? 1 : 0,
           transition: "opacity 0.2s ease",
+          pointerEvents: "auto",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        {/* Close */}
+        <button
+          style={toolBtn}
+          onClick={triggerClose}
+          aria-label="Close"
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "rgba(255,252,248,0.12)")
+          }
         >
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
 
-      {/* Prev */}
+        {/* Right-side action buttons */}
+        <div className="flex items-center gap-2">
+          {/* Zoom out */}
+          <button
+            style={{ ...toolBtn, opacity: zoom <= 1 ? 0.4 : 1 }}
+            onClick={() => setZoom((z) => Math.max(z - 0.25, 1))}
+            aria-label="Zoom out"
+            disabled={zoom <= 1}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.12)")
+            }
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          {/* Zoom in */}
+          <button
+            style={{ ...toolBtn, opacity: zoom >= 3 ? 0.4 : 1 }}
+            onClick={() => setZoom((z) => Math.min(z + 0.25, 3))}
+            aria-label="Zoom in"
+            disabled={zoom >= 3}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.12)")
+            }
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          {/* Download */}
+          <button
+            style={toolBtn}
+            onClick={handleDownload}
+            aria-label="Download"
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.12)")
+            }
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          {/* Share */}
+          <button
+            style={toolBtn}
+            onClick={handleShare}
+            aria-label="Share"
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,252,248,0.12)")
+            }
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Prev button ── */}
       {hasPrev && (
         <button
-          className="absolute left-4 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors z-10"
+          className="absolute left-3 z-20 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onPrev();
@@ -368,32 +629,111 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         </button>
       )}
 
-      {/* Media */}
+      {/* ── Media area ── */}
       <div
-        className="max-w-3xl max-h-[85vh] mx-14"
-        style={mediaStyle}
+        className="flex flex-col items-center w-full px-14"
+        style={{ ...mediaWrapStyle, maxWidth: "56rem" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {item.file_type === "video" ? (
-          <video
-            src={item.file_url}
-            controls
-            autoPlay
-            className="max-h-[85vh] max-w-full rounded-2xl shadow-glass-lg"
-          />
-        ) : (
-          <img
-            src={item.file_url}
-            alt=""
-            className="max-h-[85vh] max-w-full rounded-2xl shadow-glass-lg object-contain"
-          />
+        {/* Spinner shown while loading */}
+        {!mediaLoaded && (
+          <div
+            className="flex items-center justify-center"
+            style={{ minHeight: "40vh" }}
+          >
+            {/* <SpinnerDotted
+              size={56}
+              thickness={180}
+              speed={112}
+              color="rgba(212, 184, 150, 1)"
+            /> */}
+            <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Media — hidden until loaded */}
+        <div style={{ display: mediaLoaded ? "block" : "none", width: "100%" }}>
+          <div
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: "center center",
+              transition: "transform 0.25s cubic-bezier(0.34,1.4,0.64,1)",
+              overflow: zoom > 1 ? "visible" : "hidden",
+            }}
+          >
+            {isVideo ? (
+              <video
+                key={item.id}
+                src={item.file_url}
+                controls
+                autoPlay
+                className="max-h-[75vh] max-w-full rounded-2xl shadow-glass-lg mx-auto block"
+                onCanPlay={() => setMediaLoaded(true)}
+              />
+            ) : (
+              <img
+                key={item.id}
+                src={item.file_url}
+                alt=""
+                className="max-h-[75vh] max-w-full rounded-2xl shadow-glass-lg object-contain mx-auto block"
+                onLoad={() => setMediaLoaded(true)}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Caption — only shown when loaded */}
+        {mediaLoaded && (uploader || uploadedAt) && (
+          <div
+            className="mt-3"
+            style={{
+              opacity: visible && !closing ? 1 : 0,
+              transition: "opacity 0.35s ease 0.15s",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'Cormorant Garamond', 'Cormorant', Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "0.95rem",
+                color: "rgba(250,247,242,0.75)",
+                letterSpacing: "0.01em",
+                textAlign: "center",
+                textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                margin: 0,
+              }}
+            >
+              {uploader && (
+                <>
+                  Uploaded by{" "}
+                  <span
+                    style={{ color: "rgba(250,247,242,0.95)", fontWeight: 600 }}
+                  >
+                    {uploader}
+                  </span>
+                </>
+              )}
+              {uploader && uploadedAt && (
+                <span
+                  style={{ color: "rgba(250,247,242,0.35)", margin: "0 0.5em" }}
+                >
+                  ·
+                </span>
+              )}
+              {uploadedAt && (
+                <span style={{ color: "rgba(250,247,242,0.6)" }}>
+                  {uploadedAt}
+                </span>
+              )}
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Next */}
+      {/* ── Next button ── */}
       {hasNext && (
         <button
-          className="absolute right-4 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors z-10"
+          className="absolute right-3 z-20 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onNext();
@@ -415,6 +755,68 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
             <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
+      )}
+
+      {/* ── Swipe hint dots ── */}
+      <div
+        className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-20"
+        style={{
+          opacity: visible && !closing ? 0.5 : 0,
+          transition: "opacity 0.3s ease 0.2s",
+          pointerEvents: "none",
+        }}
+      >
+        {hasPrev && (
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "rgba(250,247,242,0.6)",
+              display: "inline-block",
+            }}
+          />
+        )}
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "rgba(250,247,242,0.95)",
+            display: "inline-block",
+          }}
+        />
+        {hasNext && (
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "rgba(250,247,242,0.6)",
+              display: "inline-block",
+            }}
+          />
+        )}
+      </div>
+
+      {/* ── Share toast ── */}
+      {shareToast && (
+        <div
+          className="fixed bottom-16 left-1/2 z-50 px-5 py-2.5 rounded-xl text-sm font-sans"
+          style={{
+            transform: "translateX(-50%)",
+            background: "rgba(255,252,248,0.15)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,252,248,0.2)",
+            color: "rgba(250,247,242,0.9)",
+            fontStyle: "italic",
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: "1rem",
+            boxShadow: "0 4px 24px rgba(46,37,32,0.3)",
+          }}
+        >
+          Link copied to clipboard
+        </div>
       )}
     </div>
   );
@@ -516,10 +918,10 @@ export default function Gallery() {
 
   return (
     <div className="min-h-svh bg-ivory">
-      {/* ── Hero ── */}
+      {/* ── Hero — fullscreen on load ── */}
       <div
         className="relative w-full overflow-hidden"
-        style={{ minHeight: "260px" }}
+        style={{ height: "100svh" }}
       >
         {ceremony?.cover_url ? (
           <>
@@ -532,7 +934,7 @@ export default function Gallery() {
               className="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(to bottom, rgba(46,37,32,0.25) 0%, rgba(46,37,32,0.55) 100%)",
+                  "linear-gradient(to bottom, rgba(46,37,32,0.1) 0%, rgba(46,37,32,0.6) 100%)",
               }}
             />
           </>
@@ -563,24 +965,25 @@ export default function Gallery() {
             </div>
           </>
         )}
-        <div
-          className="relative z-10 flex flex-col items-center justify-end h-full pb-8 pt-16 px-6 text-center"
-          style={{ minHeight: "260px" }}
-        >
+
+        {/* Title bottom-left — FIX 2: responsive sizes */}
+        <div className="absolute bottom-0 left-0 z-10 pb-10 px-6 sm:px-8 max-w-[85vw]">
           {loading ? (
             <>
-              <div className="skeleton h-8 w-48 rounded-xl mb-3" />
+              <div className="skeleton h-9 w-48 rounded-xl mb-3" />
               <div className="skeleton h-4 w-32 rounded-lg" />
             </>
           ) : (
             <>
               <h1
-                className={`font-display text-4xl sm:text-5xl font-light tracking-tight mb-2 text-balance ${ceremony?.cover_url ? "text-ivory drop-shadow-sm" : "text-text-h"}`}
+                className={`font-display font-light tracking-tight mb-2 text-balance leading-tight ${ceremony?.cover_url ? "text-ivory drop-shadow-sm" : "text-text-h"}`}
+                style={{ fontSize: "clamp(2rem, 7vw, 3.75rem)" }}
               >
                 {ceremony?.name}
               </h1>
               <div
-                className={`flex items-center gap-3 text-sm font-sans ${ceremony?.cover_url ? "text-ivory/80" : "text-text-sm"}`}
+                className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 font-sans ${ceremony?.cover_url ? "text-ivory/80" : "text-text-sm"}`}
+                style={{ fontSize: "clamp(0.7rem, 3vw, 0.875rem)" }}
               >
                 <span>
                   {media.length}{" "}
@@ -588,7 +991,7 @@ export default function Gallery() {
                 </span>
                 {media.length > 0 && (
                   <>
-                    <span className="w-1 h-1 rounded-full bg-current opacity-50" />
+                    <span className="w-1 h-1 rounded-full bg-current opacity-50 hidden sm:inline-block" />
                     <span>
                       {images.length} photos · {videos.length} videos
                     </span>
