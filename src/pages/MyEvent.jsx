@@ -20,6 +20,44 @@ function getStoragePath(url) {
   return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
 }
 
+function getFilePreview(file) {
+  return new Promise((resolve) => {
+    if (file.type.startsWith("video/")) {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = url;
+      video.muted = true;
+      video.onloadeddata = () => {
+        video.currentTime = 0.5;
+      };
+      video.onseeked = () => {
+        try {
+          const c = document.createElement("canvas");
+          c.width = 200;
+          c.height =
+            Math.round((video.videoHeight / video.videoWidth) * 200) || 150;
+          c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          resolve({ preview: c.toDataURL(), isVideo: true });
+        } catch {
+          URL.revokeObjectURL(url);
+          resolve({ preview: null, isVideo: true });
+        }
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ preview: null, isVideo: true });
+      };
+    } else {
+      const r = new FileReader();
+      r.onload = (e) => resolve({ preview: e.target.result, isVideo: false });
+      r.onerror = () => resolve({ preview: null, isVideo: false });
+      r.readAsDataURL(file);
+    }
+  });
+}
+
 /* ─── QR Sheet ─────────────────────────────────────────────────── */
 function QRSheet({ ceremony, onClose }) {
   const qrRef = useRef(null);
@@ -88,7 +126,6 @@ function QRSheet({ ceremony, onClose }) {
               </svg>
             </button>
           </div>
-
           <div ref={qrRef} className="glass p-4 rounded-2xl shadow-soft">
             <QRCodeSVG
               value={qrUrl}
@@ -98,11 +135,9 @@ function QRSheet({ ceremony, onClose }) {
               level="M"
             />
           </div>
-
           <p className="text-xs text-text-sm font-sans text-center break-all opacity-70">
             {qrUrl}
           </p>
-
           <div className="flex gap-2 w-full">
             <button
               onClick={downloadQR}
@@ -167,7 +202,7 @@ function SavingDialog({ status }) {
   );
 }
 
-/* ─── Delete Confirm ────────────────────────────────────────────── */
+/* ─── Delete Media Dialog ───────────────────────────────────────── */
 function DeleteMediaDialog({ onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -244,7 +279,267 @@ function DeleteMediaDialog({ onConfirm, onCancel, loading }) {
   );
 }
 
-/* ─── Media Card (owner view) ──────────────────────────────────── */
+/* ─── Delete EVENT Dialog ───────────────────────────────────────── */
+function DeleteEventDialog({ eventName, onConfirm, onCancel, loading, step }) {
+  const [confirmText, setConfirmText] = useState("");
+  const required = "DELETE";
+  const canConfirm = confirmText === required;
+
+  // step: "warn" → show warning first, "confirm" → require typing DELETE
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-text/20 backdrop-blur-md"
+        onClick={!loading ? onCancel : undefined}
+      />
+      <div className="relative glass-lg p-6 w-full max-w-sm shadow-glass-lg overflow-hidden">
+        <div className="h-1 bg-rose-300" />
+        <div className="pt-4">
+          {step === "warn" ? (
+            <>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg
+                    className="w-5 h-5 text-rose-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-medium text-text-h font-display">
+                    Delete this event?
+                  </h3>
+                  <p className="text-sm text-text-sm font-sans mt-1 leading-relaxed">
+                    <span className="font-medium text-text-h">
+                      "{eventName}"
+                    </span>{" "}
+                    and all its media will be permanently deleted from storage.
+                    Guests who shared photos will lose access to them.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancel}
+                  className="btn-secondary flex-1 justify-center text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm("proceed")}
+                  className="btn flex-1 justify-center text-sm bg-rose-400 text-white hover:bg-rose-500 active:scale-95 shadow-soft"
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-text-h font-display mb-1">
+                  Final confirmation
+                </h3>
+                <p className="text-sm text-text-sm font-sans mb-4">
+                  Type{" "}
+                  <span className="font-mono font-semibold text-rose-400 bg-rose-50 px-1 rounded">
+                    DELETE
+                  </span>{" "}
+                  to permanently remove this event.
+                </p>
+                <input
+                  className="input"
+                  placeholder="Type DELETE to confirm"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancel}
+                  disabled={loading}
+                  className="btn-secondary flex-1 justify-center text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm("delete")}
+                  disabled={!canConfirm || loading}
+                  className={`btn flex-1 justify-center text-sm shadow-soft transition-all ${canConfirm && !loading ? "bg-rose-500 text-white hover:bg-rose-600 active:scale-95" : "bg-rose-200 text-rose-300 cursor-not-allowed"}`}
+                >
+                  {loading ? (
+                    <svg
+                      className="w-4 h-4 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
+                  ) : (
+                    "Delete forever"
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Discard Dialog ────────────────────────────────────────────── */
+function DiscardDialog({ onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-text/10 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      <div className="relative glass-lg p-6 w-full max-w-sm shadow-glass-lg">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg
+              className="w-4 h-4 text-amber-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-medium text-text-h font-display">
+              Unsaved changes
+            </h3>
+            <p className="text-xs text-text-sm font-sans mt-0.5">
+              Your edits haven't been saved yet.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={onCancel}
+            className="btn-secondary flex-1 justify-center text-sm"
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={onConfirm}
+            className="btn flex-1 justify-center text-sm bg-amber-400 text-white hover:bg-amber-500 active:scale-95 shadow-soft"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Upload Progress mini-dialog ───────────────────────────────── */
+function UploadingDialog({ current, total }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-text/10 backdrop-blur-sm" />
+      <div className="relative glass-lg w-full max-w-xs shadow-glass-lg p-8 flex flex-col items-center gap-4">
+        <Loader />
+        <div className="text-center">
+          <p className="font-display text-lg font-light text-text-h">
+            Uploading media
+          </p>
+          <p className="text-sm text-text-sm font-sans mt-1">
+            {current} of {total} files…
+          </p>
+        </div>
+        <div className="w-full h-1.5 rounded-full bg-parchment overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-500"
+            style={{ width: `${Math.round((current / total) * 100)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── New-media thumbnail ───────────────────────────────────────── */
+function NewMediaThumb({ item, onRemove }) {
+  return (
+    <div className="relative aspect-square rounded-xl overflow-hidden bg-parchment border border-border shadow-soft">
+      {item.preview ? (
+        <img src={item.preview} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <svg
+            className="w-6 h-6 text-text-sm"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1}
+              d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"
+            />
+          </svg>
+        </div>
+      )}
+      {item.isVideo && (
+        <div className="absolute top-1 left-1 badge bg-black/40 text-white border-white/20 text-[10px] px-1 py-0.5 backdrop-blur-sm">
+          <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+      )}
+      <button
+        onClick={() => onRemove(item.id)}
+        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
+      >
+        <svg
+          className="w-3 h-3 text-white"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/* ─── Existing Media Card ───────────────────────────────────────── */
 function MediaCard({ item, onDelete }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border shadow-soft group break-inside-avoid mb-3">
@@ -356,18 +651,63 @@ export default function MyEvent() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [showQR, setShowQR] = useState(false);
-  const [toDelete, setToDelete] = useState(null);
+  const [toDelete, setToDelete] = useState(null); // single media item
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteEventStep, setDeleteEventStep] = useState(null); // null | "warn" | "confirm"
+  const [deleteEventLoading, setDeleteEventLoading] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
+  const [pendingNav, setPendingNav] = useState(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+  });
 
   // Editable fields
   const [name, setName] = useState("");
   const [theme, setTheme] = useState("classic");
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
+  const [newMediaFiles, setNewMediaFiles] = useState([]); // pending uploads
 
   const coverInputRef = useRef(null);
+  const mediaInputRef = useRef(null);
+
+  // Track if fields differ from saved state
+  const [savedName, setSavedName] = useState("");
+  const [savedTheme, setSavedTheme] = useState("classic");
+
+  const isDirty =
+    name !== savedName ||
+    theme !== savedTheme ||
+    coverFile !== null ||
+    newMediaFiles.length > 0;
+
+  // Block browser refresh when dirty
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  function tryNavigate(dest) {
+    if (isDirty) {
+      setPendingNav(dest);
+      setShowDiscard(true);
+    } else navigate(dest);
+  }
+
+  function confirmDiscard() {
+    setShowDiscard(false);
+    navigate(pendingNav ?? `/ceremony/${ceremonyId}`);
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -383,16 +723,15 @@ export default function MyEvent() {
         ]);
       if (cerErr) throw cerErr;
       if (medErr) throw medErr;
-
-      // Ownership guard
       if (cer.owner_id !== user?.id) {
         navigate(`/ceremony/${ceremonyId}/my-media`, { replace: true });
         return;
       }
-
       setCeremony(cer);
       setName(cer.name ?? "");
+      setSavedName(cer.name ?? "");
       setTheme(cer.theme ?? "classic");
+      setSavedTheme(cer.theme ?? "classic");
       setCoverPreview(cer.cover_url ?? null);
       setMedia(med ?? []);
     } catch {
@@ -416,6 +755,23 @@ export default function MyEvent() {
     e.target.value = "";
   }
 
+  async function handleNewMediaAdd(e) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    const processed = [];
+    for (const f of files) {
+      if (!f.type.startsWith("image/") && !f.type.startsWith("video/"))
+        continue;
+      if (f.size > 10 * 1024 * 1024) continue;
+      const { preview, isVideo } = await getFilePreview(f);
+      processed.push({ id: crypto.randomUUID(), file: f, preview, isVideo });
+    }
+    setNewMediaFiles((prev) => {
+      const names = new Set(prev.map((p) => p.file.name));
+      return [...prev, ...processed.filter((p) => !names.has(p.file.name))];
+    });
+  }
+
   async function handleSave() {
     if (!name.trim()) {
       setError("Event name cannot be empty.");
@@ -426,7 +782,6 @@ export default function MyEvent() {
     setSaveStatus("Saving changes…");
     try {
       let coverUrl = ceremony.cover_url;
-
       if (coverFile) {
         setSaveStatus("Uploading cover image…");
         const ext = coverFile.name.split(".").pop();
@@ -438,27 +793,62 @@ export default function MyEvent() {
         coverUrl = supabase.storage.from("media").getPublicUrl(cd.path)
           .data.publicUrl;
       }
-
       setSaveStatus("Updating event…");
       const { error: updErr } = await supabase
         .from("ceremonies")
         .update({ name: name.trim(), theme, cover_url: coverUrl })
         .eq("id", ceremonyId);
       if (updErr) throw updErr;
-
       setCeremony((prev) => ({
         ...prev,
         name: name.trim(),
         theme,
         cover_url: coverUrl,
       }));
+      setSavedName(name.trim());
+      setSavedTheme(theme);
       setCoverFile(null);
+      setSaving(false);
+
+      // Upload new media files if any
+      if (newMediaFiles.length > 0) {
+        setUploadingMedia(true);
+        setUploadProgress({ current: 0, total: newMediaFiles.length });
+        const uploaded = [];
+        for (let i = 0; i < newMediaFiles.length; i++) {
+          const { file, isVideo } = newMediaFiles[i];
+          setUploadProgress({ current: i + 1, total: newMediaFiles.length });
+          const ext = file.name.split(".").pop();
+          const path = `${ceremonyId}/${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+          const { data: fd, error: fErr } = await supabase.storage
+            .from("media")
+            .upload(path, file, { contentType: file.type });
+          if (fErr) continue;
+          const fileUrl = supabase.storage.from("media").getPublicUrl(fd.path)
+            .data.publicUrl;
+          const { data: row } = await supabase
+            .from("media")
+            .insert({
+              ceremony_id: ceremonyId,
+              uploader_id: user.id,
+              file_url: fileUrl,
+              file_type: isVideo ? "video" : "image",
+            })
+            .select()
+            .single();
+          if (row) uploaded.push(row);
+        }
+        setMedia((prev) => [...uploaded, ...prev]);
+        setNewMediaFiles([]);
+        setUploadingMedia(false);
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
       setError(e?.message ?? "Failed to save. Please try again.");
-    } finally {
       setSaving(false);
+      setUploadingMedia(false);
     }
   }
 
@@ -479,6 +869,53 @@ export default function MyEvent() {
     }
   }
 
+  async function handleDeleteEvent(action) {
+    if (action === "proceed") {
+      // Move to confirmation step
+      setDeleteEventStep("confirm");
+      return;
+    }
+    // action === "delete" — do it
+    setDeleteEventLoading(true);
+    try {
+      // 1. Fetch all media rows for this ceremony
+      const { data: allMedia } = await supabase
+        .from("media")
+        .select("file_url")
+        .eq("ceremony_id", ceremonyId);
+
+      // 2. Delete all files from storage
+      if (allMedia && allMedia.length > 0) {
+        const paths = allMedia
+          .map((m) => getStoragePath(m.file_url))
+          .filter(Boolean);
+        // Remove in batches of 100 (Supabase limit)
+        for (let i = 0; i < paths.length; i += 100) {
+          await supabase.storage.from("media").remove(paths.slice(i, i + 100));
+        }
+      }
+
+      // 3. Delete all media rows
+      await supabase.from("media").delete().eq("ceremony_id", ceremonyId);
+
+      // 4. Delete cover from storage if hosted in our bucket
+      if (ceremony?.cover_url) {
+        const coverPath = getStoragePath(ceremony.cover_url);
+        if (coverPath) await supabase.storage.from("media").remove([coverPath]);
+      }
+
+      // 5. Delete ceremony row
+      await supabase.from("ceremonies").delete().eq("id", ceremonyId);
+
+      navigate("/dashboard", { replace: true });
+    } catch (e) {
+      setError(e?.message ?? "Failed to delete event. Please try again.");
+      setDeleteEventStep(null);
+    } finally {
+      setDeleteEventLoading(false);
+    }
+  }
+
   // Masonry columns
   const cols = Array.from({ length: columns }, () => []);
   media.forEach((item, i) => cols[i % columns].push(item));
@@ -486,6 +923,12 @@ export default function MyEvent() {
   return (
     <div className="min-h-svh bg-ivory">
       {saving && <SavingDialog status={saveStatus} />}
+      {uploadingMedia && (
+        <UploadingDialog
+          current={uploadProgress.current}
+          total={uploadProgress.total}
+        />
+      )}
       {showQR && ceremony && (
         <QRSheet ceremony={ceremony} onClose={() => setShowQR(false)} />
       )}
@@ -496,12 +939,29 @@ export default function MyEvent() {
           loading={deleteLoading}
         />
       )}
+      {deleteEventStep && (
+        <DeleteEventDialog
+          eventName={ceremony?.name ?? ""}
+          step={deleteEventStep}
+          onConfirm={handleDeleteEvent}
+          onCancel={() => {
+            if (!deleteEventLoading) setDeleteEventStep(null);
+          }}
+          loading={deleteEventLoading}
+        />
+      )}
+      {showDiscard && (
+        <DiscardDialog
+          onConfirm={confirmDiscard}
+          onCancel={() => setShowDiscard(false)}
+        />
+      )}
 
       {/* Header */}
       <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/ceremony/${ceremonyId}`)}
+            onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
             className="btn-ghost px-2 py-1.5"
           >
             <svg
@@ -529,33 +989,34 @@ export default function MyEvent() {
             </h2>
           </div>
         </div>
-        {/* QR button */}
-        {!loading && ceremony && (
-          <button
-            onClick={() => setShowQR(true)}
-            className="btn-secondary gap-2 text-sm"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
+        <div className="flex items-center gap-2">
+          {!loading && ceremony && (
+            <button
+              onClick={() => setShowQR(true)}
+              className="btn-secondary gap-2 text-sm"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
-              />
-            </svg>
-            QR Code
-          </button>
-        )}
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+                />
+              </svg>
+              QR Code
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="page pt-6 pb-28 max-w-2xl">
@@ -714,20 +1175,75 @@ export default function MyEvent() {
               </div>
             </div>
 
-            {/* Media grid */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-text-h font-sans">
-                    All media
-                  </h3>
-                  <p className="text-xs text-text-sm font-sans mt-0.5">
-                    {media.length} {media.length === 1 ? "item" : "items"} — you
-                    can delete any file as the owner
-                  </p>
-                </div>
+            {/* Add media section */}
+            <div className="glass-sm p-5 flex flex-col gap-3">
+              <div>
+                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                  Add media
+                </label>
+                <p className="text-xs text-text-sm font-sans mb-3">
+                  Add more photos or videos to the event. These will be saved
+                  when you tap Save changes. Max 10 MB per file.
+                </p>
               </div>
+              <input
+                ref={mediaInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={handleNewMediaAdd}
+              />
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {newMediaFiles.map((item) => (
+                  <NewMediaThumb
+                    key={item.id}
+                    item={item}
+                    onRemove={(id) =>
+                      setNewMediaFiles((p) => p.filter((f) => f.id !== id))
+                    }
+                  />
+                ))}
+                <button
+                  onClick={() => mediaInputRef.current?.click()}
+                  className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 4.5v15m7.5-7.5h-15"
+                    />
+                  </svg>
+                  <span className="text-[11px] font-sans">Add</span>
+                </button>
+              </div>
+              {newMediaFiles.length > 0 && (
+                <p className="text-xs text-text-sm font-sans">
+                  {newMediaFiles.length} file
+                  {newMediaFiles.length !== 1 ? "s" : ""} queued — will upload
+                  on Save
+                </p>
+              )}
+            </div>
 
+            {/* Existing media grid */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <h3 className="text-sm font-medium text-text-h font-sans">
+                  All media
+                </h3>
+                <p className="text-xs text-text-sm font-sans mt-0.5">
+                  {media.length} {media.length === 1 ? "item" : "items"} — as
+                  owner you can delete any file
+                </p>
+              </div>
               {media.length === 0 ? (
                 <div className="glass-sm p-8 flex flex-col items-center gap-3 rounded-2xl">
                   <div className="w-12 h-12 rounded-full bg-parchment border border-border flex items-center justify-center">
@@ -766,6 +1282,38 @@ export default function MyEvent() {
                 </div>
               )}
             </div>
+
+            {/* Danger zone */}
+            <div className="glass-sm p-5 flex flex-col gap-3 border border-rose-200/50">
+              <div>
+                <h3 className="text-sm font-medium text-rose-400 font-sans">
+                  Danger zone
+                </h3>
+                <p className="text-xs text-text-sm font-sans mt-0.5">
+                  Deleting this event is permanent. All media will be removed
+                  from storage.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeleteEventStep("warn")}
+                className="btn flex items-center gap-2 text-sm text-rose-400 border border-rose-200/60 bg-rose-50/30 hover:bg-rose-50/60 hover:border-rose-300 active:scale-95 transition-all self-start"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                  />
+                </svg>
+                Delete this event
+              </button>
+            </div>
           </div>
         )}
       </main>
@@ -774,7 +1322,7 @@ export default function MyEvent() {
       {!loading && (
         <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
           <button
-            onClick={() => navigate(`/ceremony/${ceremonyId}`)}
+            onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
             className="btn-secondary gap-2 text-sm"
           >
             <svg

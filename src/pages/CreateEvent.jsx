@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
@@ -56,7 +56,7 @@ function getFilePreview(file) {
 }
 
 /* ─── QR Success Dialog ────────────────────────────────────────── */
-function QRDialog({ ceremony, onClose }) {
+function QRDialog({ ceremony }) {
   const navigate = useNavigate();
   const qrRef = useRef(null);
   const qrUrl = ceremony.qr_code;
@@ -99,11 +99,8 @@ function QRDialog({ ceremony, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-text/20 backdrop-blur-md" />
       <div className="relative glass-lg w-full max-w-sm shadow-glass-lg overflow-hidden">
-        {/* Top decorative band */}
         <div className="h-1.5 bg-gradient-to-r from-pink-dust via-accent to-sage-light" />
-
         <div className="px-6 pt-6 pb-8 flex flex-col items-center gap-5">
-          {/* Heading */}
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-sage-light/40 border border-sage-light/60 mb-3">
               <svg
@@ -127,8 +124,6 @@ function QRDialog({ ceremony, onClose }) {
               Share this QR code with your guests
             </p>
           </div>
-
-          {/* QR */}
           <div ref={qrRef} className="glass p-4 rounded-2xl shadow-soft">
             <QRCodeSVG
               value={qrUrl}
@@ -138,12 +133,9 @@ function QRDialog({ ceremony, onClose }) {
               level="M"
             />
           </div>
-
           <p className="text-xs text-text-sm font-sans text-center break-all px-2 opacity-70">
             {qrUrl}
           </p>
-
-          {/* Action buttons */}
           <div className="flex gap-2 w-full">
             <button
               onClick={downloadQR}
@@ -184,7 +176,6 @@ function QRDialog({ ceremony, onClose }) {
               Share
             </button>
           </div>
-
           <button
             onClick={() => navigate(`/ceremony/${ceremony.id}`)}
             className="btn-primary w-full justify-center"
@@ -210,7 +201,7 @@ function QRDialog({ ceremony, onClose }) {
   );
 }
 
-/* ─── Creating Dialog (spinner + status) ──────────────────────── */
+/* ─── Creating Dialog ──────────────────────────────────────────── */
 function CreatingDialog({ status }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -228,10 +219,63 @@ function CreatingDialog({ status }) {
   );
 }
 
+/* ─── Discard Confirm Dialog ───────────────────────────────────── */
+function DiscardDialog({ onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-text/10 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      <div className="relative glass-lg p-6 w-full max-w-sm shadow-glass-lg">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg
+              className="w-4 h-4 text-amber-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-base font-medium text-text-h font-display">
+              Discard changes?
+            </h3>
+            <p className="text-xs text-text-sm font-sans mt-0.5">
+              Your event won't be created.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={onCancel}
+            className="btn-secondary flex-1 justify-center text-sm"
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={onConfirm}
+            className="btn flex-1 justify-center text-sm bg-amber-400 text-white hover:bg-amber-500 active:scale-95 shadow-soft"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Media Thumbnail ──────────────────────────────────────────── */
 function MediaThumb({ item, onRemove }) {
   return (
-    <div className="relative aspect-square rounded-xl overflow-hidden bg-parchment border border-border shadow-soft group">
+    <div className="relative aspect-square rounded-xl overflow-hidden bg-parchment border border-border shadow-soft">
       {item.preview ? (
         <img src={item.preview} alt="" className="w-full h-full object-cover" />
       ) : (
@@ -280,6 +324,11 @@ function MediaThumb({ item, onRemove }) {
   );
 }
 
+/* ─── isDirty helper ───────────────────────────────────────────── */
+function useIsDirty(name, coverFile, mediaFiles) {
+  return name.trim().length > 0 || coverFile !== null || mediaFiles.length > 0;
+}
+
 /* ─── Main Page ────────────────────────────────────────────────── */
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -293,19 +342,47 @@ export default function CreateEvent() {
   const [mediaFiles, setMediaFiles] = useState([]);
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState("");
-  const [created, setCreated] = useState(null); // ceremony row after creation
+  const [created, setCreated] = useState(null);
   const [error, setError] = useState(null);
+  const [showDiscard, setShowDiscard] = useState(false);
+  const [pendingNav, setPendingNav] = useState(null);
 
   const coverInputRef = useRef(null);
   const mediaInputRef = useRef(null);
+
+  const isDirty = useIsDirty(name, coverFile, mediaFiles);
+
+  // Block browser back/refresh when dirty
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (isDirty && !created) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty, created]);
+
+  function tryNavigate(dest) {
+    if (isDirty && !created) {
+      setPendingNav(dest);
+      setShowDiscard(true);
+    } else navigate(dest);
+  }
+
+  function confirmDiscard() {
+    setShowDiscard(false);
+    navigate(pendingNav ?? "/dashboard");
+  }
 
   async function handleCoverChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     setCoverFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setCoverPreview(ev.target.result);
-    reader.readAsDataURL(file);
+    const r = new FileReader();
+    r.onload = (ev) => setCoverPreview(ev.target.result);
+    r.readAsDataURL(file);
     e.target.value = "";
   }
 
@@ -333,23 +410,19 @@ export default function CreateEvent() {
     }
     setError(null);
     setCreating(true);
-
     try {
-      // 1. Upload cover
       let coverUrl = null;
       if (coverFile) {
         setStatus("Uploading cover image…");
         const ext = coverFile.name.split(".").pop();
         const path = `covers/${user.id}/${Date.now()}.${ext}`;
-        const { data: coverData, error: coverErr } = await supabase.storage
+        const { data: cd, error: cErr } = await supabase.storage
           .from("media")
           .upload(path, coverFile, { contentType: coverFile.type });
-        if (coverErr) throw coverErr;
-        coverUrl = supabase.storage.from("media").getPublicUrl(coverData.path)
+        if (cErr) throw cErr;
+        coverUrl = supabase.storage.from("media").getPublicUrl(cd.path)
           .data.publicUrl;
       }
-
-      // 2. Create ceremony row
       setStatus("Creating event…");
       const { data: ceremony, error: cerErr } = await supabase
         .from("ceremonies")
@@ -363,17 +436,12 @@ export default function CreateEvent() {
         .select()
         .single();
       if (cerErr) throw cerErr;
-
-      // 3. Write QR URL back
       const qrUrl = `${APP_URL}/ceremony/${ceremony.id}`;
       await supabase
         .from("ceremonies")
         .update({ qr_code: qrUrl })
         .eq("id", ceremony.id);
-
-      // 4. Upload initial media (optional)
       if (mediaFiles.length > 0) {
-        setStatus(`Uploading media (0 / ${mediaFiles.length})…`);
         for (let i = 0; i < mediaFiles.length; i++) {
           const { file, isVideo } = mediaFiles[i];
           setStatus(`Uploading media (${i + 1} / ${mediaFiles.length})…`);
@@ -382,18 +450,19 @@ export default function CreateEvent() {
           const { data: fd, error: fErr } = await supabase.storage
             .from("media")
             .upload(path, file, { contentType: file.type });
-          if (fErr) continue; // skip failed files, don't block
+          if (fErr) continue;
           const fileUrl = supabase.storage.from("media").getPublicUrl(fd.path)
             .data.publicUrl;
-          await supabase.from("media").insert({
-            ceremony_id: ceremony.id,
-            uploader_id: user.id,
-            file_url: fileUrl,
-            file_type: isVideo ? "video" : "image",
-          });
+          await supabase
+            .from("media")
+            .insert({
+              ceremony_id: ceremony.id,
+              uploader_id: user.id,
+              file_url: fileUrl,
+              file_type: isVideo ? "video" : "image",
+            });
         }
       }
-
       setStatus("Done!");
       setCreated({ ...ceremony, qr_code: qrUrl });
     } catch (e) {
@@ -406,14 +475,17 @@ export default function CreateEvent() {
   return (
     <div className="min-h-svh bg-ivory">
       {creating && <CreatingDialog status={status} />}
-      {created && (
-        <QRDialog ceremony={created} onClose={() => setCreated(null)} />
+      {created && <QRDialog ceremony={created} />}
+      {showDiscard && (
+        <DiscardDialog
+          onConfirm={confirmDiscard}
+          onCancel={() => setShowDiscard(false)}
+        />
       )}
 
-      {/* Header */}
       <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => tryNavigate("/dashboard")}
           className="btn-ghost px-2 py-1.5"
         >
           <svg
@@ -462,7 +534,7 @@ export default function CreateEvent() {
         )}
 
         <div className="flex flex-col gap-7">
-          {/* Event name */}
+          {/* Name */}
           <div className="glass-sm p-5 flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
@@ -481,7 +553,7 @@ export default function CreateEvent() {
             </div>
           </div>
 
-          {/* Cover image */}
+          {/* Cover */}
           <div className="glass-sm p-5 flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
@@ -574,11 +646,7 @@ export default function CreateEvent() {
                 <button
                   key={t.value}
                   onClick={() => setTheme(t.value)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-sans transition-all ${
-                    theme === t.value
-                      ? "border-accent bg-accent/10 text-text-h font-medium"
-                      : "border-border bg-surface/40 text-text-sm hover:border-accent/40"
-                  }`}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-sans transition-all ${theme === t.value ? "border-accent bg-accent/10 text-text-h font-medium" : "border-border bg-surface/40 text-text-sm hover:border-accent/40"}`}
                 >
                   <span
                     className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10"
@@ -590,7 +658,7 @@ export default function CreateEvent() {
             </div>
           </div>
 
-          {/* Initial media */}
+          {/* Media */}
           <div className="glass-sm p-5 flex flex-col gap-3">
             <div>
               <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
@@ -610,8 +678,6 @@ export default function CreateEvent() {
               className="hidden"
               onChange={handleMediaAdd}
             />
-
-            {/* Grid */}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {mediaFiles.map((item) => (
                 <MediaThumb
@@ -622,7 +688,6 @@ export default function CreateEvent() {
                   }
                 />
               ))}
-              {/* Add more tile */}
               <button
                 onClick={() => mediaInputRef.current?.click()}
                 className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
@@ -643,7 +708,6 @@ export default function CreateEvent() {
                 <span className="text-[11px] font-sans">Add</span>
               </button>
             </div>
-
             {mediaFiles.length > 0 && (
               <p className="text-xs text-text-sm font-sans">
                 {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""}{" "}
@@ -654,10 +718,9 @@ export default function CreateEvent() {
         </div>
       </main>
 
-      {/* Bottom bar */}
       <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => tryNavigate("/dashboard")}
           className="btn-secondary"
         >
           Cancel
