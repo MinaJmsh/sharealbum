@@ -408,6 +408,63 @@ function DeleteEventDialog({ eventName, onConfirm, onCancel, loading, step }) {
   );
 }
 
+/* ─── Delete Event Success Dialog ──────────────────────────────── */
+function DeleteEventSuccessDialog({ eventName, onDone }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-text/20 backdrop-blur-md" />
+      <div className="relative glass-lg w-full max-w-sm shadow-glass-lg overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-sage-light via-accent to-pink-dust" />
+        <div className="px-6 pt-6 pb-8 flex flex-col items-center gap-5 text-center">
+          <div className="w-14 h-14 rounded-full bg-sage-light/30 border border-sage-light/50 flex items-center justify-center">
+            <svg
+              className="w-7 h-7 text-sage-muted"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="font-display text-2xl font-light text-text-h">
+              Event deleted
+            </h2>
+            <p className="text-sm text-text-sm font-sans mt-2 leading-relaxed">
+              <span className="font-medium text-text-h">"{eventName}"</span> and
+              all its media have been permanently removed.
+            </p>
+          </div>
+          <button
+            onClick={onDone}
+            className="btn-primary w-full justify-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 018.25 20.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z"
+              />
+            </svg>
+            Go to dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Discard Dialog ────────────────────────────────────────────── */
 function DiscardDialog({ onConfirm, onCancel }) {
   return (
@@ -655,6 +712,7 @@ export default function MyEvent() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteEventStep, setDeleteEventStep] = useState(null); // null | "warn" | "confirm"
   const [deleteEventLoading, setDeleteEventLoading] = useState(false);
+  const [deleteEventSuccess, setDeleteEventSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
@@ -907,7 +965,8 @@ export default function MyEvent() {
       // 5. Delete ceremony row
       await supabase.from("ceremonies").delete().eq("id", ceremonyId);
 
-      navigate("/dashboard", { replace: true });
+      setDeleteEventStep(null);
+      setDeleteEventSuccess(true);
     } catch (e) {
       setError(e?.message ?? "Failed to delete event. Please try again.");
       setDeleteEventStep(null);
@@ -948,6 +1007,12 @@ export default function MyEvent() {
             if (!deleteEventLoading) setDeleteEventStep(null);
           }}
           loading={deleteEventLoading}
+        />
+      )}
+      {deleteEventSuccess && (
+        <DeleteEventSuccessDialog
+          eventName={ceremony?.name ?? ""}
+          onDone={() => navigate("/dashboard", { replace: true })}
         />
       )}
       {showDiscard && (

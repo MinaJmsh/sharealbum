@@ -257,16 +257,126 @@ function SkeletonMasonry({ count = 12 }) {
   );
 }
 
+// ── Thumbnail Strip ────────────────────────────────────────────
+// FIX: smaller thumbs (w-10 h-10), no scale transform (avoids layout jump),
+// smooth cubic-bezier transitions, stopPropagation so backdrop-click doesn't eat taps
+function ThumbnailStrip({ items, activeIdx, onSelect, visible }) {
+  const stripRef = useRef(null);
+
+  useEffect(() => {
+    if (!stripRef.current) return;
+    const active = stripRef.current.querySelector("[data-active='true']");
+    active?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeIdx]);
+
+  return (
+    <div
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(12px)",
+        transition:
+          "opacity 0.4s cubic-bezier(0.4,0,0.2,1), transform 0.4s cubic-bezier(0.4,0,0.2,1)",
+        pointerEvents: visible ? "auto" : "none",
+      }}
+    >
+      <div
+        ref={stripRef}
+        className="flex gap-1.5 overflow-x-auto scrollbar-hide px-4 py-2"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {items.map((m, i) => {
+          const isActive = i === activeIdx;
+          const isVideo = m.file_type === "video";
+          return (
+            <button
+              key={m.id}
+              data-active={isActive ? "true" : "false"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(i);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden"
+              style={{
+                outline: isActive
+                  ? "2px solid rgba(201,168,124,0.95)"
+                  : "2px solid rgba(255,252,248,0.12)",
+                outlineOffset: "2px",
+                opacity: isActive ? 1 : 0.4,
+                transition:
+                  "opacity 0.35s cubic-bezier(0.4,0,0.2,1), outline-color 0.35s cubic-bezier(0.4,0,0.2,1)",
+              }}
+              aria-label={`View item ${i + 1}`}
+            >
+              {isVideo ? (
+                <div className="relative w-full h-full bg-parchment/20">
+                  <video
+                    src={m.file_url + "#t=0.5"}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: "rgba(46,37,32,0.3)" }}
+                  >
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="rgba(250,247,242,0.9)"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={m.file_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Lightbox ───────────────────────────────────────────────────
-function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
+function Lightbox({
+  item,
+  itemIndex,
+  allItems,
+  onClose,
+  onPrev,
+  onNext,
+  onSelect,
+  hasPrev,
+  hasNext,
+}) {
   const [closing, setClosing] = useState(false);
   const [visible, setVisible] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [uploader, setUploader] = useState(null);
+  const [uploaderFetched, setUploaderFetched] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [shareToast, setShareToast] = useState(false);
+  // FIX: chrome visibility — show on any interaction, auto-hide after 3s idle
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const idleTimer = useRef(null);
 
-  // Swipe state
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const swipeDeltaX = useRef(0);
@@ -274,7 +384,25 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
   const isVideo = item.file_type === "video";
   const lightboxRef = useRef(null);
 
-  // Non-passive touchmove: prevents the gallery page scrolling during horizontal swipes
+  // Reset idle timer — show chrome, restart 3s countdown
+  const resetIdle = useCallback(() => {
+    setChromeVisible(true);
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setChromeVisible(false), 3000);
+  }, []);
+
+  // Start idle timer on mount, clear on unmount
+  useEffect(() => {
+    resetIdle();
+    return () => clearTimeout(idleTimer.current);
+  }, [resetIdle]);
+
+  // Reset idle whenever item changes (navigation = activity)
+  useEffect(() => {
+    resetIdle();
+  }, [item.id, resetIdle]);
+
+  // Non-passive touchmove to block page scroll during horizontal swipe
   useEffect(() => {
     const el = lightboxRef.current;
     if (!el) return;
@@ -288,9 +416,11 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     return () => el.removeEventListener("touchmove", blockScroll);
   }, []);
 
-  // Reset on item change
+  // Reset ALL states whenever item.id changes
   useEffect(() => {
     setMediaLoaded(false);
+    setUploader(null);
+    setUploaderFetched(false);
     setZoom(1);
     setSwipeOffset(0);
   }, [item.id]);
@@ -299,7 +429,7 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
-  // Lock body scroll while lightbox is open
+  // Lock body scroll
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -308,15 +438,27 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     };
   }, []);
 
+  // Fetch uploader name — runs fresh on every item.id change
   useEffect(() => {
-    if (!item.uploader_id) return;
-    setUploader(null);
+    let cancelled = false;
+    if (!item.uploader_id) {
+      setUploader("Guest");
+      setUploaderFetched(true);
+      return;
+    }
     supabase
       .rpc("get_user_display_name", { user_id: item.uploader_id })
       .then(({ data, error }) => {
+        if (cancelled) return;
         setUploader(!error && data ? data : "Guest");
+        setUploaderFetched(true);
       });
-  }, [item.uploader_id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [item.id, item.uploader_id]);
+
+  const fullyReady = mediaLoaded && uploaderFetched;
 
   const uploadedAt = item.created_at
     ? new Date(item.created_at).toLocaleString(undefined, {
@@ -333,7 +475,16 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     setTimeout(onClose, 280);
   }
 
-  // Keyboard nav
+  // Backdrop tap: only close if it's a plain tap (not a swipe, not on chrome)
+  function handleBackdropClick() {
+    // If chrome is hidden, first tap just reveals it
+    if (!chromeVisible) {
+      resetIdle();
+      return;
+    }
+    triggerClose();
+  }
+
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") triggerClose();
@@ -346,9 +497,9 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [hasPrev, hasNext, onPrev, onNext]);
 
-  // Touch swipe handlers
   function handleTouchStart(e) {
-    if (zoom > 1) return; // disable swipe when zoomed
+    resetIdle();
+    if (zoom > 1) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     swipeDeltaX.current = 0;
@@ -357,7 +508,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     if (zoom > 1 || touchStartX.current === null) return;
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
-    // Only track horizontal swipes
     if (Math.abs(dx) > Math.abs(dy)) {
       swipeDeltaX.current = dx;
       setSwipeOffset(dx);
@@ -366,17 +516,13 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
   function handleTouchEnd() {
     if (zoom > 1) return;
     const threshold = 60;
-    if (swipeDeltaX.current < -threshold && hasNext) {
-      onNext();
-    } else if (swipeDeltaX.current > threshold && hasPrev) {
-      onPrev();
-    }
+    if (swipeDeltaX.current < -threshold && hasNext) onNext();
+    else if (swipeDeltaX.current > threshold && hasPrev) onPrev();
     setSwipeOffset(0);
     touchStartX.current = null;
     swipeDeltaX.current = 0;
   }
 
-  // Download
   async function handleDownload() {
     try {
       const response = await fetch(item.file_url);
@@ -384,8 +530,7 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const ext = isVideo ? "mp4" : "jpg";
-      a.download = `memory-${item.id}.${ext}`;
+      a.download = `memory-${item.id}.${isVideo ? "mp4" : "jpg"}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -393,7 +538,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     }
   }
 
-  // Share
   async function handleShare() {
     const shareData = { url: item.file_url };
     if (navigator.share && navigator.canShare?.(shareData)) {
@@ -428,7 +572,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         : "opacity 0.28s ease, transform 0.28s cubic-bezier(0.34,1.4,0.64,1)",
   };
 
-  // Toolbar button style helper
   const toolBtn = {
     width: 38,
     height: 38,
@@ -445,29 +588,31 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
     flexShrink: 0,
   };
 
+  const chromeTransition = "opacity 0.4s cubic-bezier(0.4,0,0.2,1)";
+
   return (
     <div
       ref={lightboxRef}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center backdrop-blur-sm"
       style={{ ...backdropStyle, background: "rgba(46,37,32,0.82)" }}
-      onClick={triggerClose}
+      onClick={handleBackdropClick}
+      onPointerMove={resetIdle}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Top bar: close + toolbar ── */}
+      {/* Top bar */}
       <div
         className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-4 pb-3"
         style={{
           background:
             "linear-gradient(to bottom, rgba(46,37,32,0.5) 0%, transparent 100%)",
-          opacity: visible && !closing ? 1 : 0,
-          transition: "opacity 0.2s ease",
-          pointerEvents: "auto",
+          opacity: chromeVisible && visible && !closing ? 1 : 0,
+          transition: chromeTransition,
+          pointerEvents: chromeVisible ? "auto" : "none",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close */}
         <button
           style={toolBtn}
           onClick={triggerClose}
@@ -491,14 +636,10 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
-
-        {/* Right-side action buttons */}
         <div className="flex items-center gap-2">
-          {/* Zoom out */}
           <button
             style={{ ...toolBtn, opacity: zoom <= 1 ? 0.4 : 1 }}
             onClick={() => setZoom((z) => Math.max(z - 0.25, 1))}
-            aria-label="Zoom out"
             disabled={zoom <= 1}
             onMouseEnter={(e) =>
               (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
@@ -520,11 +661,9 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
               <line x1="8" y1="11" x2="14" y2="11" />
             </svg>
           </button>
-          {/* Zoom in */}
           <button
             style={{ ...toolBtn, opacity: zoom >= 3 ? 0.4 : 1 }}
             onClick={() => setZoom((z) => Math.min(z + 0.25, 3))}
-            aria-label="Zoom in"
             disabled={zoom >= 3}
             onMouseEnter={(e) =>
               (e.currentTarget.style.background = "rgba(255,252,248,0.22)")
@@ -547,7 +686,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
               <line x1="8" y1="11" x2="14" y2="11" />
             </svg>
           </button>
-          {/* Download */}
           <button
             style={toolBtn}
             onClick={handleDownload}
@@ -572,7 +710,6 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
           </button>
-          {/* Share */}
           <button
             style={toolBtn}
             onClick={handleShare}
@@ -602,18 +739,20 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         </div>
       </div>
 
-      {/* ── Prev button ── */}
+      {/* Prev */}
       {hasPrev && (
         <button
           className="absolute left-3 z-20 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors"
           onClick={(e) => {
             e.stopPropagation();
+            resetIdle();
             onPrev();
           }}
           aria-label="Previous"
           style={{
-            opacity: visible && !closing ? 1 : 0,
-            transition: "opacity 0.2s ease 0.1s",
+            opacity: chromeVisible && visible && !closing ? 1 : 0,
+            transition: chromeTransition,
+            pointerEvents: chromeVisible ? "auto" : "none",
           }}
         >
           <svg
@@ -629,25 +768,22 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         </button>
       )}
 
-      {/* ── Media area ── */}
+      {/* Media area */}
       <div
         className="flex flex-col items-center w-full px-14"
         style={{ ...mediaWrapStyle, maxWidth: "56rem" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Spinner shown while loading */}
-        {!mediaLoaded && (
+        {!fullyReady && (
           <div
             className="flex items-center justify-center"
             style={{ minHeight: "40vh" }}
           >
-            {/* <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" /> */}
             <Loader />
           </div>
         )}
 
-        {/* Media — hidden until loaded */}
-        <div style={{ display: mediaLoaded ? "block" : "none", width: "100%" }}>
+        <div style={{ display: fullyReady ? "block" : "none", width: "100%" }}>
           <div
             style={{
               transform: `scale(${zoom})`,
@@ -672,18 +808,12 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
                 alt=""
                 className="max-h-[75vh] max-w-full rounded-2xl shadow-glass-lg object-contain mx-auto block"
                 onLoad={() => setMediaLoaded(true)}
-                // onLoad={() => {
-                //   setTimeout(() => {
-                //     setMediaLoaded(true);
-                //   }, 2000);
-                // }}
               />
             )}
           </div>
         </div>
 
-        {/* Caption — only shown when loaded */}
-        {mediaLoaded && (uploader || uploadedAt) && (
+        {fullyReady && (uploader || uploadedAt) && (
           <div
             className="mt-3"
             style={{
@@ -730,18 +860,20 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         )}
       </div>
 
-      {/* ── Next button ── */}
+      {/* Next */}
       {hasNext && (
         <button
           className="absolute right-3 z-20 w-9 h-9 rounded-full glass-sm flex items-center justify-center text-text hover:text-text-h transition-colors"
           onClick={(e) => {
             e.stopPropagation();
+            resetIdle();
             onNext();
           }}
           aria-label="Next"
           style={{
-            opacity: visible && !closing ? 1 : 0,
-            transition: "opacity 0.2s ease 0.1s",
+            opacity: chromeVisible && visible && !closing ? 1 : 0,
+            transition: chromeTransition,
+            pointerEvents: chromeVisible ? "auto" : "none",
           }}
         >
           <svg
@@ -757,13 +889,34 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         </button>
       )}
 
-      {/* ── Swipe hint dots ── */}
+      {/* Thumbnail strip — bottom, same chrome visibility */}
       <div
-        className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-20"
+        className="absolute bottom-0 left-0 right-0 z-20"
         style={{
-          opacity: visible && !closing ? 0.5 : 0,
-          transition: "opacity 0.3s ease 0.2s",
-          pointerEvents: "none",
+          background:
+            "linear-gradient(to top, rgba(46,37,32,0.75) 0%, transparent 100%)",
+          paddingTop: "2.5rem",
+          paddingBottom: "0.5rem",
+          pointerEvents: "none", // let the strip handle its own pointer events
+        }}
+      >
+        <ThumbnailStrip
+          items={allItems}
+          activeIdx={itemIndex}
+          onSelect={(i) => {
+            resetIdle();
+            onSelect(i);
+          }}
+          visible={chromeVisible && visible && !closing}
+        />
+      </div>
+
+      {/* Swipe dots */}
+      <div
+        className="absolute bottom-20 left-0 right-0 flex justify-center gap-1.5 z-10 pointer-events-none"
+        style={{
+          opacity: chromeVisible && visible && !closing ? 0.5 : 0,
+          transition: chromeTransition,
         }}
       >
         {hasPrev && (
@@ -799,10 +952,10 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
         )}
       </div>
 
-      {/* ── Share toast ── */}
+      {/* Share toast */}
       {shareToast && (
         <div
-          className="fixed bottom-16 left-1/2 z-50 px-5 py-2.5 rounded-xl text-sm font-sans"
+          className="fixed bottom-24 left-1/2 z-50 px-5 py-2.5 rounded-xl text-sm font-sans"
           style={{
             transform: "translateX(-50%)",
             background: "rgba(255,252,248,0.15)",
@@ -822,6 +975,53 @@ function Lightbox({ item, onClose, onPrev, onNext, hasPrev, hasNext }) {
   );
 }
 
+// ── Smart FAB ──────────────────────────────────────────────────
+function SmartFAB({ session, isOwner, onClick }) {
+  const label = isOwner ? "Manage event" : "Upload your memories";
+
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-glass-md flex items-center justify-center transition-all duration-200 active:scale-90 hover:scale-105 hover:shadow-glass-lg"
+      style={{
+        background: "linear-gradient(135deg, #D4B896 0%, #C9A87C 100%)",
+      }}
+    >
+      {isOwner ? (
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#FAF7F2"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+      ) : (
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#FAF7F2"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 // ── Main Gallery ───────────────────────────────────────────────
 export default function Gallery() {
   const { id } = useParams();
@@ -833,6 +1033,7 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [session, setSession] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -863,23 +1064,30 @@ export default function Gallery() {
     load();
   }, [id]);
 
-  const handlePlus = useCallback(async () => {
+  useEffect(() => {
+    if (session && ceremony) {
+      setIsOwner(session.user.id === ceremony.owner_id);
+    } else {
+      setIsOwner(false);
+    }
+  }, [session, ceremony]);
+
+  const handleFAB = useCallback(async () => {
     if (!session) {
       navigate("/login", { state: { from: location.pathname } });
       return;
     }
-    const { data: cer } = await supabase
-      .from("ceremonies")
-      .select("owner_id")
-      .eq("id", id)
-      .single();
-    if (cer?.owner_id === session.user.id) navigate(`/ceremony/${id}/manage`);
-    else navigate(`/ceremony/${id}/my-media`);
-  }, [session, id, navigate, location.pathname]);
+    if (isOwner) {
+      navigate(`/ceremony/${id}/manage`);
+    } else {
+      navigate(`/ceremony/${id}/my-media`);
+    }
+  }, [session, isOwner, id, navigate, location.pathname]);
 
   const closeLightbox = () => setLightbox(null);
   const prevItem = () => setLightbox((i) => (i > 0 ? i - 1 : i));
   const nextItem = () => setLightbox((i) => (i < media.length - 1 ? i + 1 : i));
+  const jumpToItem = (i) => setLightbox(i);
 
   const images = media.filter((m) => m.file_type !== "video");
   const videos = media.filter((m) => m.file_type === "video");
@@ -887,7 +1095,7 @@ export default function Gallery() {
   if (!loading && error) {
     return (
       <div className="min-h-svh flex items-center justify-center bg-ivory px-6">
-        <div className="glass max-w-sm w-full px-8 py-10 text-center space-y-4 animate-fade-up">
+        <div className="glass max-w-sm w-full px-8 py-10 text-center space-y-4">
           <div
             className="w-12 h-12 rounded-full mx-auto flex items-center justify-center"
             style={{ background: "rgba(232,197,192,0.4)" }}
@@ -918,7 +1126,7 @@ export default function Gallery() {
 
   return (
     <div className="min-h-svh bg-ivory">
-      {/* ── Hero — fullscreen on load ── */}
+      {/* Hero */}
       <div
         className="relative w-full overflow-hidden"
         style={{ height: "100svh" }}
@@ -966,7 +1174,6 @@ export default function Gallery() {
           </>
         )}
 
-        {/* Title bottom-left — FIX 2: responsive sizes */}
         <div className="absolute bottom-0 left-0 z-10 pb-10 px-6 sm:px-8 max-w-[85vw]">
           {loading ? (
             <>
@@ -1003,12 +1210,12 @@ export default function Gallery() {
         </div>
       </div>
 
-      {/* ── Grid ── */}
+      {/* Grid */}
       <div className="page pt-8">
         {loading ? (
           <SkeletonMasonry count={12} />
         ) : media.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4 animate-fade-up">
+          <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center"
               style={{ background: "rgba(212,184,150,0.2)" }}
@@ -1031,7 +1238,7 @@ export default function Gallery() {
                 No photos yet
               </p>
               <p className="text-text-sm text-sm font-sans">
-                Be the first to share a memory — tap the + button below
+                Be the first to share a memory
               </p>
             </div>
           </div>
@@ -1042,36 +1249,19 @@ export default function Gallery() {
         )}
       </div>
 
-      {/* ── + FAB ── */}
-      <button
-        onClick={handlePlus}
-        aria-label="Upload or manage"
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-glass-md flex items-center justify-center transition-all duration-200 active:scale-90 hover:scale-105 hover:shadow-glass-lg"
-        style={{
-          background: "linear-gradient(135deg, #D4B896 0%, #C9A87C 100%)",
-        }}
-      >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#FAF7F2"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
+      {/* Smart FAB */}
+      <SmartFAB session={session} isOwner={isOwner} onClick={handleFAB} />
 
-      {/* ── Lightbox ── */}
+      {/* Lightbox */}
       {lightbox !== null && media[lightbox] && (
         <Lightbox
           item={media[lightbox]}
+          itemIndex={lightbox}
+          allItems={media}
           onClose={closeLightbox}
           onPrev={prevItem}
           onNext={nextItem}
+          onSelect={jumpToItem}
           hasPrev={lightbox > 0}
           hasNext={lightbox < media.length - 1}
         />
