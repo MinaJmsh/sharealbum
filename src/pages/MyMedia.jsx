@@ -9,7 +9,7 @@ function getStoragePath(url) {
   return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
 }
 
-/* ─── Profile Menu ────────────────────────────────────────────── */
+/* ─── Profile Menu ────────────────────────────────────────────────── */
 function ProfileMenu({ user, onClose }) {
   const navigate = useNavigate();
   const initials = user?.user_metadata?.display_name
@@ -116,7 +116,7 @@ function ProfileMenu({ user, onClose }) {
   );
 }
 
-/* ─── Delete Confirm Dialog ───────────────────────────────────── */
+/* ─── Delete Confirm Dialog ───────────────────────────────────────── */
 function DeleteDialog({ onConfirm, onCancel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -193,21 +193,37 @@ function DeleteDialog({ onConfirm, onCancel, loading }) {
   );
 }
 
-/* ─── Skeleton card ───────────────────────────────────────────── */
-function SkeletonCard({ height }) {
+/* ─── FIX 2: Square grid skeleton ────────────────────────────────── */
+function SkeletonSquareGrid({ columns }) {
+  const rows = 3;
   return (
-    <div className="skeleton w-full rounded-2xl mb-3" style={{ height }} />
+    <div
+      className="grid gap-1"
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+    >
+      {Array.from({ length: columns * rows }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton rounded-xl"
+          style={{ aspectRatio: "1 / 1", animationDelay: `${i * 40}ms` }}
+        />
+      ))}
+    </div>
   );
 }
 
-/* ─── Media Card ──────────────────────────────────────────────── */
-function MediaCard({ item, onDelete }) {
+/* ─── FIX 2: Square Media Card ────────────────────────────────────── */
+function SquareMediaCard({ item, onDelete }) {
+  const isVideo = item.file_type === "video";
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border shadow-soft group break-inside-avoid mb-3">
-      {item.file_type === "video" ? (
+    <div
+      className="relative rounded-xl overflow-hidden border border-border shadow-soft group"
+      style={{ aspectRatio: "1 / 1" }}
+    >
+      {isVideo ? (
         <video
           src={item.file_url}
-          className="w-full object-cover block"
+          className="absolute inset-0 w-full h-full object-cover"
           muted
           playsInline
           preload="metadata"
@@ -221,13 +237,13 @@ function MediaCard({ item, onDelete }) {
         <img
           src={item.file_url}
           alt=""
-          className="w-full object-cover block transition-transform duration-500 group-hover:scale-105"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
-      {item.file_type === "video" && (
-        <div className="absolute top-2 left-2 badge bg-black/40 text-white border-white/20 backdrop-blur-sm text-[10px]">
+      {isVideo && (
+        <div className="absolute top-1.5 left-1.5 badge bg-black/40 text-white border-white/20 backdrop-blur-sm text-[10px]">
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
@@ -236,11 +252,11 @@ function MediaCard({ item, onDelete }) {
       )}
       <button
         onClick={() => onDelete(item)}
-        className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm border border-white/50 flex items-center justify-center shadow-soft transition-all duration-200 hover:bg-rose-50 hover:border-rose-200 active:scale-95"
+        className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-white/80 backdrop-blur-sm border border-white/50 flex items-center justify-center shadow-soft transition-all duration-200 hover:bg-rose-50 hover:border-rose-200 active:scale-95"
         title="Delete"
       >
         <svg
-          className="w-3.5 h-3.5 text-rose-400"
+          className="w-3 h-3 text-rose-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -257,15 +273,15 @@ function MediaCard({ item, onDelete }) {
   );
 }
 
-/* ─── Responsive masonry ──────────────────────────────────────── */
+/* ─── Responsive column count ─────────────────────────────────────── */
 function useColumns() {
-  const [cols, setCols] = useState(2);
+  const [cols, setCols] = useState(3);
   useEffect(() => {
     function update() {
       const w = window.innerWidth;
-      if (w >= 1280) setCols(4);
-      else if (w >= 768) setCols(3);
-      else setCols(2);
+      if (w >= 1280) setCols(5);
+      else if (w >= 768) setCols(4);
+      else setCols(3);
     }
     update();
     window.addEventListener("resize", update);
@@ -274,49 +290,7 @@ function useColumns() {
   return cols;
 }
 
-function MasonryGrid({ items, onDelete, columns }) {
-  const cols = Array.from({ length: columns }, () => []);
-  items.forEach((item, i) => cols[i % columns].push(item));
-  return (
-    <div className="flex gap-3">
-      {cols.map((col, ci) => (
-        <div key={ci} className="flex-1 flex flex-col">
-          {col.map((item) => (
-            <MediaCard key={item.id} item={item} onDelete={onDelete} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Varying heights per column so skeleton feels natural
-const SKELETON_HEIGHTS = [
-  [240, 160, 300, 180],
-  [180, 260, 140, 220],
-  [200, 320, 160, 200],
-  [280, 160, 240, 180],
-];
-
-function SkeletonGrid({ columns }) {
-  const cols = Array.from(
-    { length: columns },
-    (_, ci) => SKELETON_HEIGHTS[ci % SKELETON_HEIGHTS.length],
-  );
-  return (
-    <div className="flex gap-3">
-      {cols.map((heights, ci) => (
-        <div key={ci} className="flex-1 flex flex-col">
-          {heights.map((h, i) => (
-            <SkeletonCard key={i} height={h} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Main Page ───────────────────────────────────────────────── */
+/* ─── Main Page ───────────────────────────────────────────────────── */
 export default function MyMedia() {
   const { id: ceremonyId } = useParams();
   const navigate = useNavigate();
@@ -470,7 +444,7 @@ export default function MyMedia() {
         )}
 
         {loading ? (
-          <SkeletonGrid columns={columns} />
+          <SkeletonSquareGrid columns={columns} />
         ) : media.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-16 h-16 rounded-full bg-parchment border border-border flex items-center justify-center">
@@ -504,11 +478,19 @@ export default function MyMedia() {
                 {media.length} {media.length === 1 ? "file" : "files"} shared
               </p>
             </div>
-            <MasonryGrid
-              items={media}
-              onDelete={setToDelete}
-              columns={columns}
-            />
+            {/* FIX 2: uniform square grid instead of masonry */}
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+            >
+              {media.map((item) => (
+                <SquareMediaCard
+                  key={item.id}
+                  item={item}
+                  onDelete={setToDelete}
+                />
+              ))}
+            </div>
           </>
         )}
       </main>

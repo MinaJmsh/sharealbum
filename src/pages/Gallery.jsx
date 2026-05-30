@@ -258,8 +258,6 @@ function SkeletonMasonry({ count = 12 }) {
 }
 
 // ── Thumbnail Strip ────────────────────────────────────────────
-// FIX: smaller thumbs (w-10 h-10), no scale transform (avoids layout jump),
-// smooth cubic-bezier transitions, stopPropagation so backdrop-click doesn't eat taps
 function ThumbnailStrip({ items, activeIdx, onSelect, visible }) {
   const stripRef = useRef(null);
 
@@ -283,9 +281,10 @@ function ThumbnailStrip({ items, activeIdx, onSelect, visible }) {
         pointerEvents: visible ? "auto" : "none",
       }}
     >
+      {/* FIX 1: justify-center so strip is centered when items don't fill full width */}
       <div
         ref={stripRef}
-        className="flex gap-1.5 overflow-x-auto scrollbar-hide px-4 py-2"
+        className="flex gap-1.5 overflow-x-auto scrollbar-hide px-4 py-2 justify-center"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
@@ -889,7 +888,7 @@ function Lightbox({
         </button>
       )}
 
-      {/* Thumbnail strip — bottom, same chrome visibility */}
+      {/* Thumbnail strip */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20"
         style={{
@@ -897,7 +896,7 @@ function Lightbox({
             "linear-gradient(to top, rgba(46,37,32,0.75) 0%, transparent 100%)",
           paddingTop: "2.5rem",
           paddingBottom: "0.5rem",
-          pointerEvents: "none", // let the strip handle its own pointer events
+          pointerEvents: "none",
         }}
       >
         <ThumbnailStrip
@@ -976,8 +975,9 @@ function Lightbox({
 }
 
 // ── Smart FAB ──────────────────────────────────────────────────
+// FIX 3: non-owner icon replaced with "image + plus" concept
 function SmartFAB({ session, isOwner, onClick }) {
-  const label = isOwner ? "Manage event" : "Upload your memories";
+  const label = isOwner ? "Manage event" : "Add your memories";
 
   return (
     <button
@@ -990,6 +990,7 @@ function SmartFAB({ session, isOwner, onClick }) {
       }}
     >
       {isOwner ? (
+        /* Settings/gear icon for owner */
         <svg
           width="22"
           height="22"
@@ -1004,9 +1005,10 @@ function SmartFAB({ session, isOwner, onClick }) {
           <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
         </svg>
       ) : (
+        /* Image-with-plus icon: a landscape photo frame with a + badge */
         <svg
-          width="22"
-          height="22"
+          width="24"
+          height="24"
           viewBox="0 0 24 24"
           fill="none"
           stroke="#FAF7F2"
@@ -1014,8 +1016,15 @@ function SmartFAB({ session, isOwner, onClick }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-          <circle cx="12" cy="13" r="4" />
+          {/* Photo frame */}
+          <rect x="2" y="4" width="16" height="13" rx="2" />
+          {/* Mountain/landscape inside */}
+          <path d="M2 13.5l4-4 3 3 2.5-2.5L14 13.5" />
+          {/* Sun dot */}
+          <circle cx="6" cy="8.5" r="1" fill="#FAF7F2" stroke="none" />
+          {/* Plus badge — bottom right, slightly outside frame */}
+          <line x1="19" y1="15" x2="19" y2="21" strokeWidth="2.2" />
+          <line x1="16" y1="18" x2="22" y2="18" strokeWidth="2.2" />
         </svg>
       )}
     </button>

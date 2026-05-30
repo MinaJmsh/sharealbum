@@ -1,3 +1,418 @@
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "../supabaseClient";
+import { useAuth } from "../context/AuthContext";
+
+// ── Icons ─────────────────────────────────────────────────────────
+const LogoIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+    <circle
+      cx="16"
+      cy="16"
+      r="14"
+      fill="rgba(201,168,124,0.15)"
+      stroke="rgba(201,168,124,0.6)"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M10 20 Q16 8 22 20"
+      stroke="#c9a87c"
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+    />
+    <circle cx="16" cy="13" r="2" fill="#c9a87c" opacity="0.7" />
+  </svg>
+);
+const ArrowLeftIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="19" y1="12" x2="5" y2="12" />
+    <polyline points="12 19 5 12 12 5" />
+  </svg>
+);
+const CheckIcon = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+const EyeIcon = ({ open }) =>
+  open ? (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+const LogOutIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+// ── Toast ─────────────────────────────────────────────────────────
+function Toast({ message, type, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <div
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-glass-lg border backdrop-blur-md text-sm font-medium transition-all
+      ${
+        type === "error"
+          ? "bg-red-50/90 border-red-200 text-red-700"
+          : "bg-white/90 border-border text-text-h"
+      }`}
+    >
+      {type !== "error" && <CheckIcon />}
+      {message}
+    </div>
+  );
+}
+
+// ── Section card ──────────────────────────────────────────────────
+function Card({ title, children }) {
+  return (
+    <div className="glass rounded-2xl p-6 flex flex-col gap-5">
+      <h3 className="font-display text-lg font-medium text-text-h border-b border-border pb-3">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────
 export default function Profile() {
-  return <div>Profile Page</div>;
+  const { session } = useAuth();
+  const navigate = useNavigate();
+
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+
+  const [toast, setToast] = useState(null);
+
+  const email = session?.user?.email || "";
+  const initials = email ? email.slice(0, 2).toUpperCase() : "ME";
+
+  // Load display name from user_metadata
+  useEffect(() => {
+    const meta = session?.user?.user_metadata;
+    if (meta?.full_name) setDisplayName(meta.full_name);
+    else if (meta?.name) setDisplayName(meta.name);
+  }, [session]);
+
+  const showToast = (message, type = "success") => setToast({ message, type });
+
+  // Save display name via Supabase Auth user_metadata
+  const handleSaveName = async () => {
+    if (!displayName.trim()) return;
+    setSavingName(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: displayName.trim() },
+    });
+    setSavingName(false);
+    if (error) showToast(error.message, "error");
+    else showToast("Display name updated!");
+  };
+
+  // Change password
+  const handleChangePassword = async () => {
+    if (!newPw || !confirmPw)
+      return showToast("Please fill in all password fields.", "error");
+    if (newPw !== confirmPw)
+      return showToast("New passwords don't match.", "error");
+    if (newPw.length < 6)
+      return showToast("Password must be at least 6 characters.", "error");
+
+    setSavingPw(true);
+    // Re-authenticate by signing in first (Supabase requires current session)
+    // We update directly — Supabase handles session validation server-side
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setSavingPw(false);
+
+    if (error) showToast(error.message, "error");
+    else {
+      showToast("Password updated successfully!");
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+    }
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
+  const pwStrength = (pw) => {
+    if (!pw) return null;
+    if (pw.length < 6)
+      return { label: "Too short", color: "bg-red-400", w: "w-1/4" };
+    if (pw.length < 8)
+      return { label: "Weak", color: "bg-amber-400", w: "w-2/4" };
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw))
+      return { label: "Strong", color: "bg-green-400", w: "w-full" };
+    return { label: "Fair", color: "bg-gold-soft", w: "w-3/4" };
+  };
+  const strength = pwStrength(newPw);
+
+  return (
+    <div className="min-h-svh flex flex-col">
+      {/* ── Fixed Header ──────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
+        style={{
+          background:
+            "linear-gradient(135deg,rgba(255,252,248,0.88) 0%,rgba(250,247,242,0.78) 100%)",
+        }}
+      >
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
+          >
+            <LogoIcon />
+            <span className="font-display text-lg font-light text-text-h tracking-wide">
+              ShareAlbum
+            </span>
+          </Link>
+
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="btn-ghost text-sm gap-1.5"
+          >
+            <ArrowLeftIcon /> Dashboard
+          </button>
+        </div>
+      </header>
+
+      {/* ── Body ──────────────────────────────────────────── */}
+      <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 py-10 w-full">
+        {/* Avatar + heading */}
+        <div className="flex flex-col items-center text-center mb-10 gap-3">
+          <div className="w-20 h-20 rounded-full glass border-2 border-accent/30 flex items-center justify-center text-2xl font-display font-light text-accent shadow-glass">
+            {initials}
+          </div>
+          <div>
+            <h1 className="font-display text-3xl font-light text-text-h">
+              {displayName || email.split("@")[0]}
+            </h1>
+            <p className="text-text-sm text-sm mt-0.5">{email}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          {/* ── Display Name ────────────────────────────── */}
+          <Card title="Display Name">
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-text-sm mb-1.5">
+                  Full name
+                </label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Your display name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-sm mb-1.5">
+                  Email address
+                </label>
+                <input
+                  className="input opacity-60 cursor-not-allowed"
+                  type="email"
+                  value={email}
+                  readOnly
+                  tabIndex={-1}
+                />
+                <p className="text-text-sm text-xs mt-1">
+                  Email cannot be changed.
+                </p>
+              </div>
+              <button
+                onClick={handleSaveName}
+                disabled={savingName}
+                className="btn-primary self-start"
+              >
+                {savingName ? "Saving…" : "Save changes"}
+              </button>
+            </div>
+          </Card>
+
+          {/* ── Change Password ──────────────────────────── */}
+          <Card title="Change Password">
+            <div className="flex flex-col gap-3">
+              {/* New password */}
+              <div>
+                <label className="block text-xs font-medium text-text-sm mb-1.5">
+                  New password
+                </label>
+                <div className="relative">
+                  <input
+                    className="input pr-10"
+                    type={showNew ? "text" : "password"}
+                    placeholder="New password"
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
+                    onClick={() => setShowNew(!showNew)}
+                  >
+                    <EyeIcon open={showNew} />
+                  </button>
+                </div>
+                {strength && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1 h-1 bg-parchment rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strength.color} ${strength.w}`}
+                      />
+                    </div>
+                    <span className="text-xs text-text-sm">
+                      {strength.label}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div>
+                <label className="block text-xs font-medium text-text-sm mb-1.5">
+                  Confirm new password
+                </label>
+                <div className="relative">
+                  <input
+                    className={`input pr-10 ${confirmPw && confirmPw !== newPw ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""}`}
+                    type={showCurrent ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
+                    onClick={() => setShowCurrent(!showCurrent)}
+                  >
+                    <EyeIcon open={showCurrent} />
+                  </button>
+                </div>
+                {confirmPw && confirmPw !== newPw && (
+                  <p className="text-red-400 text-xs mt-1">
+                    Passwords don't match.
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={handleChangePassword}
+                disabled={savingPw || !newPw || !confirmPw}
+                className="btn-primary self-start disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingPw ? "Updating…" : "Update password"}
+              </button>
+            </div>
+          </Card>
+
+          {/* ── Danger zone ──────────────────────────────── */}
+          <div className="glass rounded-2xl p-6 border border-red-100/60">
+            <h3 className="font-display text-lg font-medium text-text-h border-b border-border pb-3 mb-5">
+              Session
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-text-h">Sign out</p>
+                <p className="text-xs text-text-sm mt-0.5">
+                  You'll be redirected to the login page.
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="btn flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 active:scale-95 transition-all"
+              >
+                <LogOutIcon /> Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onDone={() => setToast(null)}
+        />
+      )}
+    </div>
+  );
 }
