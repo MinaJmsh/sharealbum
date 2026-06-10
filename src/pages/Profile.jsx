@@ -106,15 +106,9 @@ function Toast({ message, type, onDone }) {
     const t = setTimeout(onDone, 3000);
     return () => clearTimeout(t);
   }, [onDone]);
-
   return (
     <div
-      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-glass-lg border backdrop-blur-md text-sm font-medium transition-all
-      ${
-        type === "error"
-          ? "bg-red-50/90 border-red-200 text-red-700"
-          : "bg-white/90 border-border text-text-h"
-      }`}
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-glass-lg border backdrop-blur-md text-sm font-medium transition-all ${type === "error" ? "bg-red-50/90 border-red-200 text-red-700" : "bg-white/90 border-border text-text-h"}`}
     >
       {type !== "error" && <CheckIcon />}
       {message}
@@ -142,11 +136,10 @@ export default function Profile() {
   const [displayName, setDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
 
-  const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
 
   const [toast, setToast] = useState(null);
@@ -154,28 +147,27 @@ export default function Profile() {
   const email = session?.user?.email || "";
   const initials = email ? email.slice(0, 2).toUpperCase() : "ME";
 
-  // Load display name from user_metadata
+  // FIX 3: Load display name — check all possible metadata fields
   useEffect(() => {
     const meta = session?.user?.user_metadata;
-    if (meta?.full_name) setDisplayName(meta.full_name);
-    else if (meta?.name) setDisplayName(meta.name);
+    if (!meta) return;
+    const name = meta.display_name || meta.full_name || meta.name || "";
+    setDisplayName(name);
   }, [session]);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
-  // Save display name via Supabase Auth user_metadata
   const handleSaveName = async () => {
     if (!displayName.trim()) return;
     setSavingName(true);
     const { error } = await supabase.auth.updateUser({
-      data: { full_name: displayName.trim() },
+      data: { full_name: displayName.trim(), display_name: displayName.trim() },
     });
     setSavingName(false);
     if (error) showToast(error.message, "error");
     else showToast("Display name updated!");
   };
 
-  // Change password
   const handleChangePassword = async () => {
     if (!newPw || !confirmPw)
       return showToast("Please fill in all password fields.", "error");
@@ -183,23 +175,17 @@ export default function Profile() {
       return showToast("New passwords don't match.", "error");
     if (newPw.length < 6)
       return showToast("Password must be at least 6 characters.", "error");
-
     setSavingPw(true);
-    // Re-authenticate by signing in first (Supabase requires current session)
-    // We update directly — Supabase handles session validation server-side
     const { error } = await supabase.auth.updateUser({ password: newPw });
     setSavingPw(false);
-
     if (error) showToast(error.message, "error");
     else {
       showToast("Password updated successfully!");
-      setCurrentPw("");
       setNewPw("");
       setConfirmPw("");
     }
   };
 
-  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/login");
@@ -219,7 +205,6 @@ export default function Profile() {
 
   return (
     <div className="min-h-svh flex flex-col">
-      {/* ── Fixed Header ──────────────────────────────────── */}
       <header
         className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
         style={{
@@ -237,7 +222,6 @@ export default function Profile() {
               ShareAlbum
             </span>
           </Link>
-
           <button
             onClick={() => navigate("/dashboard")}
             className="btn-ghost text-sm gap-1.5"
@@ -247,7 +231,6 @@ export default function Profile() {
         </div>
       </header>
 
-      {/* ── Body ──────────────────────────────────────────── */}
       <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 py-10 w-full">
         {/* Avatar + heading */}
         <div className="flex flex-col items-center text-center mb-10 gap-3">
@@ -307,7 +290,6 @@ export default function Profile() {
           {/* ── Change Password ──────────────────────────── */}
           <Card title="Change Password">
             <div className="flex flex-col gap-3">
-              {/* New password */}
               <div>
                 <label className="block text-xs font-medium text-text-sm mb-1.5">
                   New password
@@ -342,8 +324,6 @@ export default function Profile() {
                   </div>
                 )}
               </div>
-
-              {/* Confirm password */}
               <div>
                 <label className="block text-xs font-medium text-text-sm mb-1.5">
                   Confirm new password
@@ -351,7 +331,7 @@ export default function Profile() {
                 <div className="relative">
                   <input
                     className={`input pr-10 ${confirmPw && confirmPw !== newPw ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""}`}
-                    type={showCurrent ? "text" : "password"}
+                    type={showConfirm ? "text" : "password"}
                     placeholder="Confirm new password"
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
@@ -360,9 +340,9 @@ export default function Profile() {
                     type="button"
                     tabIndex={-1}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
-                    onClick={() => setShowCurrent(!showCurrent)}
+                    onClick={() => setShowConfirm(!showConfirm)}
                   >
-                    <EyeIcon open={showCurrent} />
+                    <EyeIcon open={showConfirm} />
                   </button>
                 </div>
                 {confirmPw && confirmPw !== newPw && (
@@ -371,7 +351,6 @@ export default function Profile() {
                   </p>
                 )}
               </div>
-
               <button
                 onClick={handleChangePassword}
                 disabled={savingPw || !newPw || !confirmPw}
@@ -382,30 +361,22 @@ export default function Profile() {
             </div>
           </Card>
 
-          {/* ── Danger zone ──────────────────────────────── */}
-          <div className="glass rounded-2xl p-6 border border-red-100/60">
-            <h3 className="font-display text-lg font-medium text-text-h border-b border-border pb-3 mb-5">
-              Session
-            </h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-text-h">Sign out</p>
-                <p className="text-xs text-text-sm mt-0.5">
-                  You'll be redirected to the login page.
-                </p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="btn flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 active:scale-95 transition-all"
-              >
-                <LogOutIcon /> Sign out
-              </button>
-            </div>
+          {/* ── Sign out — subtle row, no heavy card ── */}
+          <div className="flex items-center justify-between px-2 py-1">
+            <p className="text-xs text-text-sm">
+              Signed in as <span className="text-text">{email}</span>
+            </p>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-sm text-rose-400 hover:text-rose-600 transition-colors"
+            >
+              <LogOutIcon />
+              Sign out
+            </button>
           </div>
         </div>
       </main>
 
-      {/* Toast */}
       {toast && (
         <Toast
           message={toast.message}

@@ -12,6 +12,8 @@ import CreateEvent from "./pages/CreateEvent";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
+import Landing from "./pages/LandingPage";
 
 function App() {
   return (
@@ -19,6 +21,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Public */}
+          <Route path="/" element={<Landing />} />
           <Route path="/ceremony/:id" element={<Gallery />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -73,6 +76,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -200,7 +200,7 @@ const THEME_PALETTE = {
 };
 const themeFor = (t) => THEME_PALETTE[t] || THEME_PALETTE.default;
 
-// ── Sort Dropdown ─────────────────────────────────────────────────
+// ── Sort Dropdown — FIX 2: proper glass blur matching ProfileMenu ──
 function SortDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const current = SORT_OPTIONS.find((o) => o.value === value);
@@ -220,10 +220,17 @@ function SortDropdown({ value, onChange }) {
             className="fixed inset-0"
             style={{ zIndex: 99 }}
             onClick={() => setOpen(false)}
-          />{" "}
+          />
           <div
-            className="absolute right-0 top-full mt-2 w-48 glass-sm p-1 shadow-glass-lg"
-            style={{ zIndex: 100 }}
+            className="absolute right-0 top-full mt-2 w-48 p-1 shadow-glass-lg"
+            style={{
+              zIndex: 100,
+              background: "rgba(255,252,248,0.75)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
+              border: "1px solid rgba(255,255,255,0.5)",
+              borderRadius: "1rem",
+            }}
           >
             {SORT_OPTIONS.map((opt) => (
               <button
@@ -244,12 +251,13 @@ function SortDropdown({ value, onChange }) {
   );
 }
 
-// ── Event Card — Grid mode ────────────────────────────────────────
+// ── Event Card — Grid mode — FIX 1: no hover animation ───────────
 function GridCard({ event, isOwner }) {
   const navigate = useNavigate();
   const theme = themeFor(event.theme);
   return (
-    <div className="group relative flex flex-col rounded-2xl overflow-hidden shadow-glass hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-1">
+    // FIX 1: removed hover:-translate-y-1 and transition-all duration-300
+    <div className="group relative flex flex-col rounded-2xl overflow-hidden shadow-glass hover:shadow-glass-lg">
       <div
         className="relative w-full bg-gradient-to-br from-parchment to-cream overflow-hidden"
         style={{ aspectRatio: "16/9" }}
@@ -258,7 +266,7 @@ function GridCard({ event, isOwner }) {
           <img
             src={event.cover_url}
             alt={event.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div
@@ -279,7 +287,6 @@ function GridCard({ event, isOwner }) {
             Owner
           </span>
         )}
-        {/* Glass panel overlaid on image bottom */}
         <div
           className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-3"
           style={{
@@ -362,13 +369,14 @@ function GridCard({ event, isOwner }) {
   );
 }
 
-// ── Event Card — List mode ────────────────────────────────────────
+// ── Event Card — List mode — FIX 1: no hover animation ───────────
 function ListCard({ event, isOwner }) {
   const navigate = useNavigate();
   const theme = themeFor(event.theme);
   return (
+    // FIX 1: removed hover:-translate-y-0.5 and transition-all duration-300
     <div
-      className="group relative flex items-center rounded-2xl overflow-hidden hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-0.5"
+      className="group relative flex items-center rounded-2xl overflow-hidden hover:shadow-glass-lg"
       style={{ height: "72px" }}
     >
       <div className="relative flex-shrink-0 w-24 h-full">
@@ -376,7 +384,7 @@ function ListCard({ event, isOwner }) {
           <img
             src={event.cover_url}
             alt={event.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div
@@ -618,7 +626,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-svh flex flex-col">
-      {/* ── Fixed Header ─────────────────────────────────── */}
       <header
         className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
         style={{
@@ -653,9 +660,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* ── Page body ────────────────────────────────────── */}
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
-        {/* Welcome + global controls */}
         <div className="mb-10 flex items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-4xl font-light text-text-h">
@@ -697,7 +702,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ── My Events ──────────────────────────────────── */}
         <section className="mb-14">
           <div className="flex items-center gap-3 mb-5">
             <h2 className="font-display text-2xl font-light text-text-h">
@@ -707,7 +711,6 @@ export default function Dashboard() {
               <span className="badge-gold text-xs">{myEvents.length}</span>
             )}
           </div>
-
           {myEvents.length === 0 ? (
             <EmptyState isOwner />
           ) : viewMode === "grid" ? (
@@ -736,10 +739,8 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* ── Divider ────────────────────────────────────── */}
         {joinedEvents.length > 0 && <div className="divider mb-14 -mt-8" />}
 
-        {/* ── Joined Events ──────────────────────────────── */}
         {joinedEvents.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-5">
@@ -764,7 +765,6 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Mobile FAB */}
         <button
           onClick={() => navigate("/ceremony/create")}
           className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full btn-primary shadow-glass-lg flex items-center justify-center z-40"
