@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+// بالای فایل
+import { useState, useEffect, useRef, useCallback } from "react";
+// ─── Easing constants (Emil: custom curves, never built-in) ───────────────────
+const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
+const EASE_INOUT = "cubic-bezier(0.77, 0, 0.175, 1)";
+// Requires at top of LandingPage.jsx:
+import Step1SVG from "../assets/illustrations/step1.svg";
+import Step2SVG from "../assets/illustrations/step2.svg";
+import Step3SVG from "../assets/illustrations/step3.svg";
 
 // ─── Intersection Observer Hook ───────────────────────────────────────────────
 function useInView(options = {}) {
@@ -149,20 +157,6 @@ const ArrowRight = () => (
     <polyline points="12 5 19 12 12 19" />
   </svg>
 );
-const CheckIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
 const StarIcon = () => (
   <svg
     width="14"
@@ -200,6 +194,22 @@ const EyeIcon = ({ open }) =>
       <circle cx="12" cy="12" r="3" />
     </svg>
   );
+const DownloadIcon = () => (
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
 
 // ─── Animated Section Wrapper ─────────────────────────────────────────────────
 function Reveal({ children, delay = 0, className = "" }) {
@@ -210,8 +220,8 @@ function Reveal({ children, delay = 0, className = "" }) {
       className={className}
       style={{
         opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(28px)",
-        transition: `opacity 0.65s ease ${delay}ms, transform 0.65s ease ${delay}ms`,
+        transform: inView ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.6s ${EASE_OUT} ${delay}ms, transform 0.6s ${EASE_OUT} ${delay}ms`,
       }}
     >
       {children}
@@ -284,9 +294,9 @@ function Navbar() {
         left: 0,
         right: 0,
         zIndex: 50,
-        transition: "all 0.4s ease",
+        transition: `background 0.4s ${EASE_OUT}, box-shadow 0.4s ${EASE_OUT}`,
         background: scrolled ? "rgba(250,247,242,0.88)" : "transparent",
-        backdropFilter: scrolled ? "blur(16px)" : "none",
+        backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
         borderBottom: scrolled
           ? "1px solid rgba(210,200,188,0.45)"
           : "1px solid transparent",
@@ -304,7 +314,6 @@ function Navbar() {
           height: "68px",
         }}
       >
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             style={{
@@ -335,7 +344,6 @@ function Navbar() {
           </span>
         </div>
 
-        {/* Desktop links */}
         <div
           className="nav-desktop"
           style={{ display: "flex", alignItems: "center", gap: "6px" }}
@@ -354,7 +362,7 @@ function Navbar() {
                 color: "#5C5148",
                 fontFamily: "'DM Sans',sans-serif",
                 textDecoration: "none",
-                transition: "all 0.2s",
+                transition: `background 0.18s ${EASE_OUT}`,
               }}
               onMouseEnter={(e) =>
                 (e.target.style.background = "rgba(201,168,124,0.12)")
@@ -374,7 +382,7 @@ function Navbar() {
               fontFamily: "'DM Sans',sans-serif",
               textDecoration: "none",
               border: "1px solid rgba(201,168,124,0.5)",
-              transition: "all 0.2s",
+              transition: `all 0.18s ${EASE_OUT}`,
             }}
             onMouseEnter={(e) => {
               e.target.style.background = "rgba(201,168,124,0.12)";
@@ -398,20 +406,21 @@ function Navbar() {
               textDecoration: "none",
               background: "linear-gradient(135deg,#C9A87C,#B8905E)",
               boxShadow: "0 2px 12px rgba(201,168,124,0.4)",
-              transition: "all 0.2s",
+              transition: `box-shadow 0.18s ${EASE_OUT}, transform 0.18s ${EASE_OUT}`,
             }}
-            onMouseEnter={(e) =>
-              (e.target.style.boxShadow = "0 4px 20px rgba(201,168,124,0.6)")
-            }
-            onMouseLeave={(e) =>
-              (e.target.style.boxShadow = "0 2px 12px rgba(201,168,124,0.4)")
-            }
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = "0 6px 20px rgba(201,168,124,0.6)";
+              e.target.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = "0 2px 12px rgba(201,168,124,0.4)";
+              e.target.style.transform = "translateY(0)";
+            }}
           >
             Sign up free
           </a>
         </div>
 
-        {/* Mobile hamburger */}
         <button
           className="nav-mobile"
           onClick={() => setMenuOpen((v) => !v)}
@@ -449,13 +458,12 @@ function Navbar() {
         </button>
       </div>
 
-      {/* Mobile dropdown menu */}
       {menuOpen && (
         <div
           className="nav-mobile"
           style={{
             background: "rgba(250,247,242,0.97)",
-            backdropFilter: "blur(16px)",
+            backdropFilter: "blur(20px) saturate(180%)",
             borderTop: "1px solid rgba(210,200,188,0.4)",
             padding: "16px 24px",
             display: "flex",
@@ -532,17 +540,15 @@ function PhoneMockup() {
   ];
   return (
     <div style={{ position: "relative" }}>
-      {/* Glow */}
       <div
         style={{
           position: "absolute",
           inset: "-20px",
           background:
-            "radial-gradient(ellipse, rgba(201,168,124,0.2) 0%, transparent 70%)",
+            "radial-gradient(ellipse,rgba(201,168,124,0.2) 0%,transparent 70%)",
           borderRadius: "50%",
         }}
       />
-      {/* Phone shell */}
       <div
         style={{
           width: "260px",
@@ -550,11 +556,10 @@ function PhoneMockup() {
           borderRadius: "38px",
           padding: "10px",
           boxShadow:
-            "0 32px 80px rgba(46,37,32,0.35), 0 0 0 1px rgba(255,255,255,0.08) inset",
+            "0 32px 80px rgba(46,37,32,0.35),0 0 0 1px rgba(255,255,255,0.08) inset",
           position: "relative",
         }}
       >
-        {/* Screen */}
         <div
           style={{
             background: "#FAF7F2",
@@ -564,7 +569,6 @@ function PhoneMockup() {
             padding: "20px 14px",
           }}
         >
-          {/* Status bar */}
           <div
             style={{
               display: "flex",
@@ -577,7 +581,7 @@ function PhoneMockup() {
               style={{
                 fontSize: "0.7rem",
                 color: "#5C5148",
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "'DM Sans',sans-serif",
                 fontWeight: 600,
               }}
             >
@@ -619,8 +623,6 @@ function PhoneMockup() {
               </div>
             </div>
           </div>
-
-          {/* App header */}
           <div style={{ marginBottom: "14px" }}>
             <div
               style={{
@@ -678,8 +680,6 @@ function PhoneMockup() {
               </div>
             </div>
           </div>
-
-          {/* Photo grid */}
           <div
             style={{
               display: "grid",
@@ -718,8 +718,6 @@ function PhoneMockup() {
               </div>
             ))}
           </div>
-
-          {/* Upload button */}
           <button
             style={{
               width: "100%",
@@ -738,12 +736,9 @@ function PhoneMockup() {
               gap: "6px",
             }}
           >
-            <CameraIcon />
-            Add your photos
+            <CameraIcon /> Add your photos
           </button>
         </div>
-
-        {/* Home indicator */}
         <div
           style={{
             height: "20px",
@@ -762,8 +757,6 @@ function PhoneMockup() {
           />
         </div>
       </div>
-
-      {/* Floating notification */}
       <div
         className="phone-badge-right"
         style={{
@@ -847,7 +840,7 @@ function PhoneMockup() {
   );
 }
 
-// ─── Hero Section ─────────────────────────────────────────────────────────────
+// ─── Hero ─────────────────────────────────────────────────────────────────────
 function Hero() {
   const [scanHover, setScanHover] = useState(false);
   return (
@@ -873,7 +866,6 @@ function Hero() {
             "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
         }}
       />
-
       <div
         style={{
           maxWidth: "1160px",
@@ -884,9 +876,7 @@ function Hero() {
           zIndex: 1,
         }}
       >
-        {/* Two-column on large, stack on small */}
         <div className="hero-grid">
-          {/* Left: copy */}
           <div>
             <div
               style={{
@@ -976,11 +966,11 @@ function Hero() {
                   fontWeight: 500,
                   border: "none",
                   boxShadow: scanHover
-                    ? "0 8px 32px rgba(201,168,124,0.55)"
+                    ? "0 10px 32px rgba(201,168,124,0.55)"
                     : "0 4px 20px rgba(201,168,124,0.4)",
                   cursor: "pointer",
                   transform: scanHover ? "translateY(-2px)" : "translateY(0)",
-                  transition: "all 0.25s ease",
+                  transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
                 }}
               >
                 <CameraIcon size={18} /> Scan to open gallery
@@ -1003,7 +993,7 @@ function Hero() {
                   boxShadow: "0 4px 16px rgba(90,70,50,0.06)",
                   cursor: "pointer",
                   textDecoration: "none",
-                  transition: "all 0.25s ease",
+                  transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-2px)";
@@ -1071,7 +1061,6 @@ function Hero() {
             </div>
           </div>
 
-          {/* Right: phone mockup */}
           <div
             className="hero-phone"
             style={{
@@ -1084,7 +1073,6 @@ function Hero() {
           </div>
         </div>
 
-        {/* Scroll hint */}
         <div
           style={{
             position: "absolute",
@@ -1119,252 +1107,499 @@ function Hero() {
   );
 }
 
-// ─── How It Works ─────────────────────────────────────────────────────────────
-function HowItWorks() {
-  const steps = [
-    {
-      num: "01",
-      icon: <QrIcon />,
-      title: "Scan the QR code",
-      body: "Each event has a unique QR code. Guests scan it at arrival — no app download, no sign-in required for guests.",
-    },
-    {
-      num: "02",
-      icon: <CameraIcon />,
-      title: "Capture & upload",
-      body: "Tap the camera, snap your moments, and upload instantly. Photos appear in the shared gallery in real time.",
-    },
-    {
-      num: "03",
-      icon: <ImageIcon />,
-      title: "Watch the gallery grow",
-      body: "See everyone's perspectives in one beautiful, organized space. Download the full album anytime.",
-    },
-  ];
+const STEPS = [
+  {
+    num: "01",
+    title: "Scan the QR code",
+    body: "Each event generates a unique code. Guests scan it on arrival — no app, no account, no friction.",
+    accent: "#C9A87C",
+    tag: "For guests",
+    svg: Step1SVG,
+  },
+  {
+    num: "02",
+    title: "Capture & upload",
+    body: "Open the camera directly in the gallery. Photos appear in the shared album the moment they're taken.",
+    accent: "#C98F87",
+    tag: "Instant sharing",
+    svg: Step2SVG,
+  },
+  {
+    num: "03",
+    title: "Keep every memory",
+    body: "See every perspective in one organized, beautiful space. Download the full album as a ZIP anytime.",
+    accent: "#8DAA84",
+    tag: "Forever yours",
+    svg: Step3SVG,
+  },
+];
+
+// ── Thin vertical progress track — fills TOP → BOTTOM, continuous ──────────
+function ProgressTrack({ fillProgress }) {
   return (
-    <section
-      id="how"
+    <div
       style={{
-        padding: "clamp(64px,10vw,120px) 24px",
-        background: "#FAF7F2",
-        position: "relative",
-        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        height: "100%",
+        width: "3px",
       }}
+      aria-hidden="true"
     >
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%,-50%)",
-          width: "800px",
-          height: "400px",
-          background:
-            "radial-gradient(ellipse,rgba(201,168,124,0.07) 0%,transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
-      <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
-        <Reveal>
+      {STEPS.map((step, i) => {
+        const segFill = Math.max(0, Math.min(1, fillProgress - i));
+        return (
           <div
+            key={i}
             style={{
-              textAlign: "center",
-              marginBottom: "clamp(40px,6vw,64px)",
+              position: "relative",
+              flex: 1,
+              width: "3px",
+              borderRadius: "2px",
+              background: "rgba(210,200,188,0.35)",
+              overflow: "hidden",
             }}
           >
-            <span
+            <div
               style={{
-                fontSize: "0.75rem",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "#C9A87C",
-                fontFamily: "'DM Sans',sans-serif",
-                fontWeight: 500,
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${segFill * 100}%`,
+                borderRadius: "2px",
+                background: step.accent,
+                transition: "height 0.12s linear",
               }}
-            >
-              How it works
-            </span>
-            <h2
-              style={{
-                fontFamily: "'Cormorant Garamond',serif",
-                fontSize: "clamp(1.8rem,4vw,3rem)",
-                fontWeight: 600,
-                color: "#2E2520",
-                marginTop: "12px",
-                lineHeight: 1.15,
-              }}
-            >
-              Three steps to a shared memory
-            </h2>
+            />
           </div>
-        </Reveal>
+        );
+      })}
+    </div>
+  );
+}
 
-        <div className="three-col-grid" style={{ position: "relative" }}>
-          {/* Connecting line — desktop only */}
-          <div
-            className="connecting-line"
+// ── Left visual — bare SVG, no card, fit to a fixed measured height ────────
+function StepVisual({ activeIndex, fixedHeight }) {
+  const s = STEPS[activeIndex];
+  return (
+    <div
+      style={{
+        position: "relative",
+        height: fixedHeight ? `${fixedHeight}px` : "260px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        boxSizing: "border-box",
+        transition: `height 0.2s ${EASE_OUT}`,
+      }}
+    >
+      <div style={{ position: "relative", flex: 1, width: "100%" }}>
+        {STEPS.map((step, i) => (
+          <img
+            key={i}
+            src={step.svg}
+            alt={step.title}
             style={{
               position: "absolute",
-              top: "52px",
-              left: "calc(16.66% + 24px)",
-              right: "calc(16.66% + 24px)",
-              height: "1px",
-              background:
-                "linear-gradient(90deg,transparent,rgba(201,168,124,0.4),rgba(201,168,124,0.4),transparent)",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: i === activeIndex ? 1 : 0,
+              transform: i === activeIndex ? "scale(1)" : "scale(0.96)",
+              transition: `opacity 0.45s ${EASE_OUT}, transform 0.45s ${EASE_OUT}`,
               pointerEvents: "none",
             }}
           />
-          {steps.map((s, i) => (
-            <Reveal key={i} delay={i * 120}>
-              <div
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── One row in the step list ────────────────────────────────────────────────
+function StepRow({ step, index, isActive, onClick }) {
+  return (
+    <div
+      onClick={() => onClick(index)}
+      style={{
+        display: "flex",
+        gap: "18px",
+        padding: "clamp(14px,2vw,20px) 4px",
+        cursor: "pointer",
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: isActive
+            ? "clamp(2rem,2.8vw,2.6rem)"
+            : "clamp(1.6rem,2.2vw,2rem)",
+          fontWeight: 600,
+          lineHeight: 1,
+          color: isActive ? step.accent : "rgba(92,81,72,0.22)",
+          transition: `all 0.4s ${EASE_OUT}`,
+          minWidth: "50px",
+        }}
+      >
+        {step.num}
+      </span>
+
+      <div style={{ flex: 1 }}>
+        <h3
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: "clamp(1rem, 1.6vw, 1.25rem)",
+            fontWeight: 600,
+            color: isActive ? "#2E2520" : "rgba(46,37,32,0.5)",
+            marginBottom: "6px",
+            lineHeight: 1.25,
+            transition: `color 0.4s ${EASE_OUT}`,
+          }}
+        >
+          {step.title}
+        </h3>
+        <p
+          style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: "0.84rem",
+            lineHeight: 1.65,
+            color: isActive ? "#5C5148" : "rgba(92,81,72,0.45)",
+            transition: `color 0.4s ${EASE_OUT}`,
+            maxWidth: "44ch",
+          }}
+        >
+          {step.body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Main exported section ────────────────────────────────────────────────────
+function HowItWorks() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [fillProgress, setFillProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [rightColHeight, setRightColHeight] = useState(null);
+
+  const outerRef = useRef(null); // tall pinning wrapper
+  const rightColRef = useRef(null); // description column — measured, never stretched
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Measure the right column's natural height and mirror it onto the SVG slot
+  useEffect(() => {
+    const el = rightColRef.current;
+    if (!el) return;
+    const update = () => setRightColHeight(el.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [isMobile]);
+
+  // Progress driven by how far we've scrolled through the tall outer wrapper
+  useEffect(() => {
+    const compute = () => {
+      const el = outerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scrollable = rect.height - window.innerHeight;
+      if (scrollable <= 0) return;
+
+      const scrolled = -rect.top;
+      const raw = (scrolled / scrollable) * STEPS.length;
+      const clamped = Math.max(0, Math.min(STEPS.length - 0.001, raw));
+
+      setFillProgress(clamped);
+      setActiveIndex(
+        Math.min(STEPS.length - 1, Math.max(0, Math.floor(clamped))),
+      );
+    };
+
+    const onScroll = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        compute();
+        rafRef.current = null;
+      });
+    };
+
+    compute();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  const handleStepClick = useCallback((i) => {
+    const el = outerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const scrollable = rect.height - window.innerHeight;
+    const targetFraction = (i + 0.5) / STEPS.length;
+    const targetY = window.scrollY + rect.top + scrollable * targetFraction;
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+  }, []);
+
+  // Extra scroll runway per step. Mobile needs less since content is shorter.
+  const wrapperHeight = isMobile
+    ? `${STEPS.length * 70}svh`
+    : `${STEPS.length * 90}vh`;
+  const pinnedHeight = isMobile ? "100svh" : "100vh";
+
+  return (
+    <section id="how" style={{ background: "#FAF7F2", position: "relative" }}>
+      <div
+        ref={outerRef}
+        style={{ position: "relative", height: wrapperHeight }}
+      >
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            height: pinnedHeight,
+            display: "flex",
+            alignItems: "center",
+            overflow: "hidden",
+            padding: isMobile
+              ? "clamp(56px, 10vw, 80px) clamp(16px, 5vw, 24px)"
+              : "clamp(72px, 8vw, 96px) clamp(16px, 5vw, 40px)",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Ambient radial backgrounds */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `
+                radial-gradient(ellipse at 15% 30%, rgba(232,197,192,0.14) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 70%, rgba(212,184,150,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(200,213,192,0.08) 0%, transparent 60%)
+              `,
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              maxWidth: "1120px",
+              margin: "0 auto",
+              position: "relative",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                marginBottom: isMobile ? "20px" : "clamp(32px, 5vw, 48px)",
+              }}
+            >
+              <span
                 style={{
-                  background: "rgba(255,252,248,0.75)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(210,200,188,0.55)",
-                  borderRadius: "20px",
-                  padding: "clamp(20px,3vw,32px) clamp(16px,3vw,28px)",
-                  boxShadow: "0 4px 24px rgba(90,70,50,0.07)",
-                  transition: "all 0.3s ease",
-                  cursor: "default",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-6px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 16px 48px rgba(90,70,50,0.13)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 24px rgba(90,70,50,0.07)";
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "#C9A87C",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 500,
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: "20px",
-                  }}
+                How it works
+              </span>
+              <h2
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: isMobile
+                    ? "clamp(1.5rem, 6vw, 1.9rem)"
+                    : "clamp(1.8rem, 3.6vw, 2.6rem)",
+                  fontWeight: 600,
+                  color: "#2E2520",
+                  marginTop: "8px",
+                  lineHeight: 1.1,
+                  textWrap: "balance",
+                }}
+              >
+                Three steps.{" "}
+                <em
+                  style={{ fontStyle: "italic", color: "rgba(46,37,32,0.4)" }}
                 >
-                  <div
-                    style={{
-                      width: "52px",
-                      height: "52px",
-                      borderRadius: "14px",
-                      background:
-                        "linear-gradient(135deg,rgba(201,168,124,0.2),rgba(201,143,135,0.15))",
-                      border: "1px solid rgba(201,168,124,0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#C9A87C",
-                    }}
-                  >
-                    {s.icon}
-                  </div>
-                  <span
-                    style={{
-                      fontFamily: "'Cormorant Garamond',serif",
-                      fontSize: "2.5rem",
-                      fontWeight: 600,
-                      color: "rgba(201,168,124,0.25)",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {s.num}
-                  </span>
+                  One shared moment.
+                </em>
+              </h2>
+            </div>
+
+            {isMobile ? (
+              <div>
+                <div style={{ marginBottom: "8px" }}>
+                  <StepVisual
+                    activeIndex={activeIndex}
+                    fixedHeight={
+                      rightColHeight ? Math.min(rightColHeight, 220) : 200
+                    }
+                  />
                 </div>
-                <h3
-                  style={{
-                    fontFamily: "'Cormorant Garamond',serif",
-                    fontSize: "clamp(1.1rem,2vw,1.35rem)",
-                    fontWeight: 600,
-                    color: "#2E2520",
-                    marginBottom: "10px",
-                  }}
+                <div
+                  ref={rightColRef}
+                  style={{ display: "flex", flexDirection: "column" }}
                 >
-                  {s.title}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.9rem",
-                    lineHeight: 1.65,
-                    color: "#5C5148",
-                  }}
-                >
-                  {s.body}
-                </p>
+                  {STEPS.map((step, i) => (
+                    <div key={i} style={{ display: "flex", gap: "12px" }}>
+                      <div style={{ paddingTop: "6px" }}>
+                        <div
+                          style={{
+                            width: "3px",
+                            height: "100%",
+                            minHeight: "58px",
+                            borderRadius: "2px",
+                            background: "rgba(210,200,188,0.35)",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              height: `${Math.max(0, Math.min(1, fillProgress - i)) * 100}%`,
+                              background: step.accent,
+                              borderRadius: "2px",
+                              transition: "height 0.12s linear",
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <StepRow
+                        step={step}
+                        index={i}
+                        isActive={i === activeIndex}
+                        onClick={handleStepClick}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </Reveal>
-          ))}
+            ) : (
+              // Desktop: right column keeps its natural (unstretched) height;
+              // that height is measured and mirrored onto the SVG slot so the
+              // illustration scales to fit it via objectFit: contain.
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "0.85fr 24px 1.15fr",
+                  gap: "0 28px",
+                  alignItems: "center",
+                }}
+              >
+                <StepVisual
+                  activeIndex={activeIndex}
+                  fixedHeight={rightColHeight}
+                />
+                <ProgressTrack fillProgress={fillProgress} />
+                <div
+                  ref={rightColRef}
+                  style={{ display: "flex", flexDirection: "column" }}
+                >
+                  {STEPS.map((step, i) => (
+                    <StepRow
+                      key={i}
+                      step={step}
+                      index={i}
+                      isActive={i === activeIndex}
+                      onClick={handleStepClick}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @media (prefers-reduced-motion: reduce) {
+          #how * { transition-duration: 0.01ms !important; }
+        }
+      `}</style>
     </section>
   );
 }
 
-// ─── Features Grid ─────────────────────────────────────────────────────────────
+// Import SVGs as modules — this is why they weren't rendering before
+import f1 from "../assets/illustrations/f1.svg";
+import f2 from "../assets/illustrations/f2.svg";
+import f3 from "../assets/illustrations/f3.svg";
+import f4 from "../assets/illustrations/f4.svg";
+
+const ILLUSTRATIONS = { f1, f2, f3, f4 };
+
+// ─── Features Grid — glass bento cards with fading SVG illustrations ─────────
 function Features() {
   const features = [
     {
-      icon: <QrIcon />,
+      illustration: "f1",
       title: "Instant QR access",
-      body: "Generate a unique QR per event. Guests scan and land straight in the gallery.",
-      accent: "#C9A87C",
-    },
-    {
-      icon: <CameraIcon />,
-      title: "In-app camera",
-      body: "Open the camera directly from the gallery. Capture and upload in one tap.",
+      body: "One code per event. Guests tap and they're in — no redirect, no download, no friction.",
       accent: "#C98F87",
+      wide: true,
     },
     {
-      icon: <UsersIcon />,
+      illustration: "f2",
       title: "Collaborative albums",
-      body: "Unlimited guests can contribute. Watch the gallery grow throughout the event.",
-      accent: "#8DAA84",
+      body: "Unlimited contributors. Watch the gallery grow in real time throughout the event.",
+      accent: "#B8905E",
     },
     {
-      icon: <LockIcon />,
+      illustration: "f3",
       title: "Private by default",
-      body: "Each album is access-controlled. Only guests with the QR code or link can view.",
-      accent: "#C9A87C",
-    },
-    {
-      icon: <ImageIcon />,
-      title: "HD downloads",
-      body: "Download individual photos or the full album as a ZIP — always in original quality.",
-      accent: "#C98F87",
-    },
-    {
-      icon: <SparkleIcon />,
-      title: "Auto-organized",
-      body: "Smart timeline view groups photos by contributor and time so nothing gets lost.",
+      body: "Access-controlled from day one. Only guests with your QR code or link can view anything.",
       accent: "#8DAA84",
+    },
+    {
+      illustration: "f4",
+      title: "HD downloads",
+      body: "Original-quality downloads, always. Export individual photos or the full album as a ZIP.",
+      accent: "#C98F87",
+      wide: true,
     },
   ];
+
   return (
     <section
       id="features"
       style={{
-        padding: "clamp(64px,10vw,120px) 24px",
+        padding: "clamp(80px,10vw,128px) 24px",
         background: "linear-gradient(180deg,#FAF7F2 0%,#F5F0E8 100%)",
         position: "relative",
       }}
     >
       <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
         <Reveal>
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: "clamp(40px,6vw,64px)",
-            }}
-          >
+          <div style={{ marginBottom: "clamp(52px,7vw,80px)" }}>
             <span
               style={{
-                fontSize: "0.75rem",
-                letterSpacing: "0.12em",
+                fontSize: "0.72rem",
+                letterSpacing: "0.14em",
                 textTransform: "uppercase",
                 color: "#C9A87C",
                 fontFamily: "'DM Sans',sans-serif",
@@ -1376,80 +1611,30 @@ function Features() {
             <h2
               style={{
                 fontFamily: "'Cormorant Garamond',serif",
-                fontSize: "clamp(1.8rem,4vw,3rem)",
+                fontSize: "clamp(2rem,4vw,3.2rem)",
                 fontWeight: 600,
                 color: "#2E2520",
-                marginTop: "12px",
+                marginTop: "10px",
+                lineHeight: 1.1,
               }}
             >
-              Everything your event needs
+              Everything your
+              <br />
+              <em style={{ fontStyle: "italic", color: "rgba(46,37,32,0.45)" }}>
+                event needs.
+              </em>
             </h2>
           </div>
         </Reveal>
-        <div className="features-grid">
+
+        <div className="features-bento">
           {features.map((f, i) => (
-            <Reveal key={i} delay={i * 80}>
-              <div
-                style={{
-                  background: "rgba(255,252,248,0.7)",
-                  backdropFilter: "blur(14px)",
-                  border: "1px solid rgba(210,200,188,0.5)",
-                  borderRadius: "18px",
-                  padding: "clamp(18px,2.5vw,28px) clamp(14px,2.5vw,24px)",
-                  boxShadow: "0 2px 12px rgba(90,70,50,0.06)",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 12px 36px rgba(90,70,50,0.11)";
-                  e.currentTarget.style.borderColor = `${f.accent}55`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 12px rgba(90,70,50,0.06)";
-                  e.currentTarget.style.borderColor = "rgba(210,200,188,0.5)";
-                }}
-              >
-                <div
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "12px",
-                    background: `linear-gradient(135deg,${f.accent}22,${f.accent}11)`,
-                    border: `1px solid ${f.accent}44`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: f.accent,
-                    marginBottom: "16px",
-                  }}
-                >
-                  {f.icon}
-                </div>
-                <h3
-                  style={{
-                    fontFamily: "'Cormorant Garamond',serif",
-                    fontSize: "clamp(1rem,2vw,1.2rem)",
-                    fontWeight: 600,
-                    color: "#2E2520",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {f.title}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.875rem",
-                    lineHeight: 1.65,
-                    color: "#5C5148",
-                  }}
-                >
-                  {f.body}
-                </p>
-              </div>
+            <Reveal
+              key={i}
+              delay={i * 50}
+              className={f.wide ? "feature-wide" : ""}
+            >
+              <FeatureCard feature={f} />
             </Reveal>
           ))}
         </div>
@@ -1458,163 +1643,156 @@ function Features() {
   );
 }
 
-// ─── Testimonials ─────────────────────────────────────────────────────────────
-function Testimonials() {
-  const items = [
-    {
-      name: "Emma R.",
-      role: "Wedding photographer",
-      text: "My clients absolutely love it. I share the QR at the start and by the end of the night there are 400 photos from every angle.",
-      avatar: "#E8C5C0",
-    },
-    {
-      name: "Marcus T.",
-      role: "Corporate event planner",
-      text: "We used ShareAlbum for our annual summit. The QR scan flow is so smooth that even tech-averse guests managed it easily.",
-      avatar: "#C8D5C0",
-    },
-    {
-      name: "Lena K.",
-      role: "Birthday host",
-      text: "No more chasing people for their photos! Everything ended up in one album. I cried seeing all the moments I missed.",
-      avatar: "#D4B896",
-    },
-  ];
+function FeatureCard({ feature: f }) {
+  const [hov, setHov] = useState(false);
+
   return (
-    <section
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{
-        padding: "clamp(64px,10vw,120px) 24px",
-        background: "#FAF7F2",
         position: "relative",
+        height: "100%",
+        minHeight: "260px",
+        borderRadius: "22px",
+        background: hov ? "rgba(255,252,248,0.78)" : "rgba(255,252,248,0.62)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+        border: hov
+          ? `1px solid ${f.accent}55`
+          : "1px solid rgba(210,200,188,0.5)",
+        boxShadow: hov
+          ? `0 18px 48px rgba(90,70,50,0.14), 0 0 0 1px ${f.accent}18`
+          : "0 4px 20px rgba(90,70,50,0.06)",
+        transform: hov ? "translateY(-4px)" : "translateY(0)",
+        transition: `transform 0.25s ${EASE_OUT}, box-shadow 0.25s ${EASE_OUT}, background 0.25s ${EASE_OUT}, border-color 0.25s ${EASE_OUT}`,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
+      {/* Tinted glow wash behind the illustration so it reads on glass, not flat color */}
       <div
+        aria-hidden="true"
         style={{
           position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "50%",
-          background: "linear-gradient(0deg,#F5F0E8,transparent)",
+          top: "-20%",
+          right: "-10%",
+          width: "70%",
+          height: "140%",
+          background: `radial-gradient(ellipse at 70% 50%, ${f.accent}22 0%, transparent 68%)`,
           pointerEvents: "none",
         }}
       />
+
+      {/* Illustration — bleeds off the right edge, fades into the glass */}
       <div
-        style={{ maxWidth: "1160px", margin: "0 auto", position: "relative" }}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          width: "58%",
+          height: "100%",
+          maskImage:
+            "linear-gradient(105deg, transparent 0%, transparent 6%, black 50%, black 100%)",
+          WebkitMaskImage:
+            "linear-gradient(105deg, transparent 0%, transparent 6%, black 50%, black 100%)",
+          pointerEvents: "none",
+          transform: hov ? "scale(1.04)" : "scale(1)",
+          transition: `transform 0.5s ${EASE_OUT}`,
+        }}
       >
-        <Reveal>
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: "clamp(40px,6vw,64px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.75rem",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "#C9A87C",
-                fontFamily: "'DM Sans',sans-serif",
-                fontWeight: 500,
-              }}
-            >
-              Testimonials
-            </span>
-            <h2
-              style={{
-                fontFamily: "'Cormorant Garamond',serif",
-                fontSize: "clamp(1.8rem,4vw,3rem)",
-                fontWeight: 600,
-                color: "#2E2520",
-                marginTop: "12px",
-              }}
-            >
-              Memories worth sharing
-            </h2>
-          </div>
-        </Reveal>
-        <div className="three-col-grid">
-          {items.map((t, i) => (
-            <Reveal key={i} delay={i * 100}>
-              <div
-                style={{
-                  background: "rgba(255,252,248,0.75)",
-                  backdropFilter: "blur(16px)",
-                  border: "1px solid rgba(210,200,188,0.5)",
-                  borderRadius: "20px",
-                  padding: "clamp(18px,2.5vw,28px) clamp(14px,2.5vw,24px)",
-                  boxShadow: "0 4px 24px rgba(90,70,50,0.07)",
-                }}
-              >
-                <div
-                  style={{ display: "flex", gap: "2px", marginBottom: "16px" }}
-                >
-                  {[1, 2, 3, 4, 5].map((k) => (
-                    <span key={k} style={{ color: "#C9A87C" }}>
-                      <StarIcon />
-                    </span>
-                  ))}
-                </div>
-                <p
-                  style={{
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.9rem",
-                    lineHeight: 1.7,
-                    color: "#5C5148",
-                    marginBottom: "20px",
-                    fontStyle: "italic",
-                  }}
-                >
-                  "{t.text}"
-                </p>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
-                  <div
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: t.avatar,
-                      border: "2px solid rgba(255,255,255,0.8)",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div
-                      style={{
-                        fontFamily: "'DM Sans',sans-serif",
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        color: "#2E2520",
-                      }}
-                    >
-                      {t.name}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "'DM Sans',sans-serif",
-                        fontSize: "0.75rem",
-                        color: "#9A8F85",
-                      }}
-                    >
-                      {t.role}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+        <img
+          src={ILLUSTRATIONS[f.illustration]}
+          alt=""
+          style={{
+            position: "absolute",
+            top: "50%",
+            right: "-6%",
+            transform: "translateY(-50%)",
+            width: "100%",
+            height: "auto",
+            opacity: 0.95,
+          }}
+        />
       </div>
-    </section>
+
+      {/* Content */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "clamp(26px,3vw,36px) clamp(24px,3vw,34px)",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          maxWidth: "60%",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-block",
+            alignSelf: "flex-start",
+            fontFamily: "'DM Sans',sans-serif",
+            fontSize: "0.68rem",
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            color: f.accent,
+            background: "rgba(255,255,255,0.55)",
+            backdropFilter: "blur(6px)",
+            border: `1px solid ${f.accent}35`,
+            padding: "5px 12px",
+            borderRadius: "999px",
+            marginBottom: "18px",
+          }}
+        >
+          Feature
+        </span>
+
+        <h3
+          style={{
+            fontFamily: "'Cormorant Garamond',serif",
+            fontSize: "clamp(1.3rem,2.4vw,1.7rem)",
+            fontWeight: 600,
+            color: "#2E2520",
+            lineHeight: 1.15,
+            marginBottom: "10px",
+          }}
+        >
+          {f.title}
+        </h3>
+
+        <p
+          style={{
+            fontFamily: "'DM Sans',sans-serif",
+            fontSize: "0.875rem",
+            lineHeight: 1.65,
+            color: "#5C5148",
+            flexGrow: 1,
+          }}
+        >
+          {f.body}
+        </p>
+
+        <span
+          style={{
+            fontFamily: "'DM Sans',sans-serif",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            color: f.accent,
+            marginTop: "16px",
+          }}
+        >
+          Learn more →
+        </span>
+      </div>
+    </div>
   );
 }
 
 // ─── Auth Section ─────────────────────────────────────────────────────────────
-// Password strength helper
 function pwStrength(pw) {
   if (!pw) return 0;
   let s = 0;
@@ -1627,16 +1805,12 @@ function pwStrength(pw) {
 
 function AuthSection() {
   const [tab, setTab] = useState("signup");
-
-  // Login state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPass, setShowLoginPass] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
-
-  // Signup state
   const [name, setName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
@@ -1661,10 +1835,9 @@ function AuthSection() {
     fontSize: "0.875rem",
     color: "#2E2520",
     outline: "none",
-    transition: "all 0.2s",
+    transition: `border-color 0.18s ${EASE_OUT}, box-shadow 0.18s ${EASE_OUT}`,
     boxSizing: "border-box",
   };
-
   const labelStyle = {
     display: "block",
     fontFamily: "'DM Sans',sans-serif",
@@ -1675,7 +1848,6 @@ function AuthSection() {
     textTransform: "uppercase",
     letterSpacing: "0.07em",
   };
-
   function handleFocus(e) {
     e.target.style.borderColor = "rgba(201,168,124,0.7)";
     e.target.style.boxShadow = "0 0 0 3px rgba(201,168,124,0.12)";
@@ -1685,18 +1857,26 @@ function AuthSection() {
     e.target.style.boxShadow = "none";
   }
 
+  const sectionStyle = {
+    padding: "clamp(64px,10vw,120px) 24px",
+    background: "#FAF7F2",
+    position: "relative",
+    overflow: "hidden",
+  };
+  const cardStyle = {
+    background: "rgba(255,252,248,0.88)",
+    backdropFilter: "blur(20px) saturate(180%)",
+    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+    border: "1px solid rgba(210,200,188,0.55)",
+    borderRadius: "24px",
+    padding: "clamp(28px,4vw,40px) clamp(22px,4vw,34px)",
+    boxShadow: "0 8px 40px rgba(90,70,50,0.1)",
+  };
+
   // Forgot password view
   if (showForgot) {
     return (
-      <section
-        id="auth"
-        style={{
-          padding: "clamp(64px,10vw,120px) 24px",
-          background: "#FAF7F2",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
+      <section id="auth" style={sectionStyle}>
         <div
           style={{ maxWidth: "460px", margin: "0 auto", position: "relative" }}
         >
@@ -1718,7 +1898,7 @@ function AuthSection() {
                 padding: "0",
                 marginBottom: "32px",
                 fontFamily: "'DM Sans',sans-serif",
-                transition: "color 0.2s",
+                transition: `color 0.18s ${EASE_OUT}`,
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#5C5148")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#9A8F85")}
@@ -1759,16 +1939,7 @@ function AuthSection() {
                 Enter your email and we'll send you a reset link.
               </p>
             </div>
-            <div
-              style={{
-                background: "rgba(255,252,248,0.85)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(210,200,188,0.55)",
-                borderRadius: "24px",
-                padding: "clamp(24px,4vw,36px) clamp(20px,4vw,32px)",
-                boxShadow: "0 8px 40px rgba(90,70,50,0.1)",
-              }}
-            >
+            <div style={cardStyle}>
               {forgotSent ? (
                 <div style={{ textAlign: "center" }}>
                   <div
@@ -1878,28 +2049,10 @@ function AuthSection() {
   // Signup done state
   if (signupDone) {
     return (
-      <section
-        id="auth"
-        style={{
-          padding: "clamp(64px,10vw,120px) 24px",
-          background: "#FAF7F2",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
+      <section id="auth" style={sectionStyle}>
         <div style={{ maxWidth: "460px", margin: "0 auto" }}>
           <Reveal>
-            <div
-              style={{
-                background: "rgba(255,252,248,0.85)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid rgba(210,200,188,0.55)",
-                borderRadius: "24px",
-                padding: "clamp(32px,5vw,48px) clamp(20px,4vw,32px)",
-                boxShadow: "0 8px 40px rgba(90,70,50,0.1)",
-                textAlign: "center",
-              }}
-            >
+            <div style={{ ...cardStyle, textAlign: "center" }}>
               <div
                 style={{
                   width: "56px",
@@ -1975,15 +2128,7 @@ function AuthSection() {
   }
 
   return (
-    <section
-      id="auth"
-      style={{
-        padding: "clamp(64px,10vw,120px) 24px",
-        background: "#FAF7F2",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <section id="auth" style={sectionStyle}>
       <div
         style={{
           position: "absolute",
@@ -2026,16 +2171,7 @@ function AuthSection() {
             </p>
           </div>
 
-          <div
-            style={{
-              background: "rgba(255,252,248,0.85)",
-              backdropFilter: "blur(20px)",
-              border: "1px solid rgba(210,200,188,0.55)",
-              borderRadius: "24px",
-              padding: "clamp(24px,4vw,36px) clamp(20px,4vw,32px)",
-              boxShadow: "0 8px 40px rgba(90,70,50,0.1)",
-            }}
-          >
+          <div style={cardStyle}>
             {/* Tab switcher */}
             <div
               style={{
@@ -2064,7 +2200,7 @@ function AuthSection() {
                     fontWeight: tab === t ? 600 : 400,
                     boxShadow:
                       tab === t ? "0 2px 8px rgba(90,70,50,0.1)" : "none",
-                    transition: "all 0.2s",
+                    transition: `all 0.2s ${EASE_OUT}`,
                   }}
                 >
                   {t === "signup" ? "Sign up" : "Log in"}
@@ -2072,7 +2208,7 @@ function AuthSection() {
               ))}
             </div>
 
-            {/* ── LOGIN FORM ── */}
+            {/* LOGIN */}
             {tab === "login" && (
               <div
                 style={{
@@ -2165,7 +2301,7 @@ function AuthSection() {
                     cursor: "pointer",
                     boxShadow: "0 4px 20px rgba(201,168,124,0.45)",
                     marginTop: "4px",
-                    transition: "all 0.25s",
+                    transition: `transform 0.18s ${EASE_OUT}, box-shadow 0.18s ${EASE_OUT}`,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow =
@@ -2177,73 +2313,15 @@ function AuthSection() {
                       "0 4px 20px rgba(201,168,124,0.45)";
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
+                  onMouseDown={(e) =>
+                    (e.currentTarget.style.transform = "scale(0.98)")
+                  }
+                  onMouseUp={(e) =>
+                    (e.currentTarget.style.transform = "translateY(-1px)")
+                  }
                 >
                   Sign in
                 </button>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    margin: "4px 0",
-                  }}
-                >
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "1px",
-                      background: "rgba(210,200,188,0.5)",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#9A8F85",
-                      fontFamily: "'DM Sans',sans-serif",
-                    }}
-                  >
-                    or
-                  </span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "1px",
-                      background: "rgba(210,200,188,0.5)",
-                    }}
-                  />
-                </div>
-
-                {/* Google */}
-                <button
-                  style={{
-                    width: "100%",
-                    padding: "11px",
-                    borderRadius: "13px",
-                    border: "1px solid rgba(210,200,188,0.65)",
-                    background: "rgba(255,252,248,0.8)",
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.875rem",
-                    color: "#5C5148",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "10px",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(237,232,222,0.6)";
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255,252,248,0.8)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  <GoogleLogo /> Continue with Google
-                </button>
-
                 <p
                   style={{
                     textAlign: "center",
@@ -2273,7 +2351,7 @@ function AuthSection() {
               </div>
             )}
 
-            {/* ── SIGNUP FORM ── */}
+            {/* SIGNUP */}
             {tab === "signup" && (
               <div
                 style={{
@@ -2352,7 +2430,6 @@ function AuthSection() {
                       <EyeIcon open={showSignupPass} />
                     </button>
                   </div>
-                  {/* Strength meter */}
                   {signupPassword && (
                     <div style={{ marginTop: "8px" }}>
                       <div
@@ -2373,7 +2450,7 @@ function AuthSection() {
                                 i <= strength
                                   ? strengthColor
                                   : "rgba(210,200,188,0.6)",
-                              transition: "background 0.3s",
+                              transition: `background 0.25s ${EASE_OUT}`,
                             }}
                           />
                         ))}
@@ -2476,7 +2553,7 @@ function AuthSection() {
                     cursor: "pointer",
                     boxShadow: "0 4px 20px rgba(201,168,124,0.45)",
                     marginTop: "4px",
-                    transition: "all 0.25s",
+                    transition: `transform 0.18s ${EASE_OUT}, box-shadow 0.18s ${EASE_OUT}`,
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow =
@@ -2488,72 +2565,15 @@ function AuthSection() {
                       "0 4px 20px rgba(201,168,124,0.45)";
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
+                  onMouseDown={(e) =>
+                    (e.currentTarget.style.transform = "scale(0.98)")
+                  }
+                  onMouseUp={(e) =>
+                    (e.currentTarget.style.transform = "translateY(-1px)")
+                  }
                 >
                   Create account
                 </button>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    margin: "4px 0",
-                  }}
-                >
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "1px",
-                      background: "rgba(210,200,188,0.5)",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#9A8F85",
-                      fontFamily: "'DM Sans',sans-serif",
-                    }}
-                  >
-                    or
-                  </span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "1px",
-                      background: "rgba(210,200,188,0.5)",
-                    }}
-                  />
-                </div>
-
-                <button
-                  style={{
-                    width: "100%",
-                    padding: "11px",
-                    borderRadius: "13px",
-                    border: "1px solid rgba(210,200,188,0.65)",
-                    background: "rgba(255,252,248,0.8)",
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.875rem",
-                    color: "#5C5148",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "10px",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(237,232,222,0.6)";
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255,252,248,0.8)";
-                    e.currentTarget.style.transform = "translateY(0)";
-                  }}
-                >
-                  <GoogleLogo /> Continue with Google
-                </button>
-
                 <p
                   style={{
                     textAlign: "center",
@@ -2589,29 +2609,6 @@ function AuthSection() {
   );
 }
 
-function GoogleLogo() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
-  );
-}
-
 // ─── CTA Banner ───────────────────────────────────────────────────────────────
 function CTABanner() {
   return (
@@ -2628,7 +2625,8 @@ function CTABanner() {
             margin: "0 auto",
             textAlign: "center",
             background: "rgba(255,252,248,0.75)",
-            backdropFilter: "blur(16px)",
+            backdropFilter: "blur(16px) saturate(160%)",
+            WebkitBackdropFilter: "blur(16px) saturate(160%)",
             border: "1px solid rgba(201,168,124,0.4)",
             borderRadius: "28px",
             padding: "clamp(32px,5vw,56px) clamp(20px,5vw,48px)",
@@ -2701,7 +2699,7 @@ function CTABanner() {
                 fontWeight: 500,
                 textDecoration: "none",
                 boxShadow: "0 4px 20px rgba(201,168,124,0.45)",
-                transition: "all 0.25s",
+                transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
@@ -2729,7 +2727,7 @@ function CTABanner() {
                 fontFamily: "'DM Sans',sans-serif",
                 fontSize: "0.92rem",
                 textDecoration: "none",
-                transition: "all 0.25s",
+                transition: `transform 0.2s ${EASE_OUT}`,
                 background: "rgba(255,252,248,0.6)",
                 backdropFilter: "blur(8px)",
               }}
@@ -2851,7 +2849,7 @@ function Footer() {
                         fontSize: "0.85rem",
                         color: "#9A8F85",
                         textDecoration: "none",
-                        transition: "color 0.2s",
+                        transition: `color 0.18s ${EASE_OUT}`,
                       }}
                       onMouseEnter={(e) => (e.target.style.color = "#C9A87C")}
                       onMouseLeave={(e) => (e.target.style.color = "#9A8F85")}
@@ -2937,71 +2935,57 @@ const globalStyles = `
   ::-webkit-scrollbar-track { background: #FAF7F2; }
   ::-webkit-scrollbar-thumb { background: rgba(201,168,124,0.4); border-radius: 3px; }
 
-  /* ── Responsive grid helpers ── */
-
-  /* Hero: 2-col on ≥900px, stack below */
-  .hero-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 80px;
-    align-items: center;
+  /* ── Hover: only on pointer-capable devices ── */
+  @media (hover: hover) and (pointer: fine) {
+    a, button { cursor: pointer; }
   }
-  @media (max-width: 900px) {
-    .hero-grid {
-      grid-template-columns: 1fr;
-      gap: 56px;
-      text-align: center;
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
     }
+  }
+
+  /* ── Hero ── */
+  .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 56px; text-align: center; }
     .hero-grid > div:first-child p { margin-left: auto; margin-right: auto; }
     .hero-grid > div:first-child > div:nth-child(3) { justify-content: center; }
     .hero-grid > div:first-child > div:nth-child(4) { justify-content: center; }
     .hero-grid > div:first-child > div:last-child { justify-content: center; }
   }
-
-  /* Phone mockup badges: hide on narrow so they don't overflow */
   @media (max-width: 540px) {
-    .phone-badge-right,
-    .phone-badge-left { display: none !important; }
+    .phone-badge-right, .phone-badge-left { display: none !important; }
     .hero-phone { padding: 0 8px; }
   }
 
-  /* How It Works / Testimonials: 3-col → 1-col */
-  .three-col-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 28px;
-  }
-  @media (max-width: 860px) {
-    .three-col-grid {
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-    .connecting-line { display: none; }
-  }
-  @media (min-width: 540px) and (max-width: 860px) {
-    .three-col-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
+  /* ── How It Works ── */
+  .three-col-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 860px) { .three-col-grid { grid-template-columns: 1fr; gap: 16px; } .connecting-line { display: none; } }
+  @media (min-width: 540px) and (max-width: 860px) { .three-col-grid { grid-template-columns: repeat(2,1fr); } }
 
-  /* Features: 3-col → 2-col → 1-col */
-  .features-grid {
+  /* ── Features bento ── */
+  .features-bento {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+    grid-template-rows: auto auto;
+    gap: 20px;
   }
+  .feature-wide { grid-column: span 2; }
+
   @media (max-width: 860px) {
-    .features-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+    .features-bento { grid-template-columns: repeat(2, 1fr); }
+    .feature-wide { grid-column: span 2; }
   }
   @media (max-width: 520px) {
-    .features-grid {
-      grid-template-columns: 1fr;
-    }
+    .features-bento { grid-template-columns: 1fr; }
+    .feature-wide { grid-column: span 1; }
   }
 
-  /* Navbar: show/hide desktop vs mobile */
+  /* ── Navbar ── */
   .nav-desktop { display: flex !important; }
   .nav-mobile  { display: none !important; }
   @media (max-width: 680px) {
@@ -3009,25 +2993,10 @@ const globalStyles = `
     .nav-mobile  { display: flex !important; }
   }
 
-  /* Footer: 4-col → 2-col → 1-col */
-  .footer-grid {
-    display: grid;
-    grid-template-columns: 1.5fr repeat(3, 1fr);
-    gap: 40px;
-    align-items: start;
-  }
-  @media (max-width: 760px) {
-    .footer-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 28px;
-    }
-  }
-  @media (max-width: 440px) {
-    .footer-grid {
-      grid-template-columns: 1fr;
-      gap: 24px;
-    }
-  }
+  /* ── Footer ── */
+  .footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3,1fr); gap: 40px; align-items: start; }
+  @media (max-width: 760px) { .footer-grid { grid-template-columns: repeat(2,1fr); gap: 28px; } }
+  @media (max-width: 440px) { .footer-grid { grid-template-columns: 1fr; gap: 24px; } }
 `;
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
@@ -3040,7 +3009,6 @@ export default function LandingPage() {
         <Hero />
         <HowItWorks />
         <Features />
-        <Testimonials />
         <AuthSection />
         <CTABanner />
       </main>
