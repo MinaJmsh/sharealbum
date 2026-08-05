@@ -1,5 +1,6 @@
 import Navbar from "../components/landing/NavBar";
 import Hero from "../components/landing/Hero";
+import EventTypesMarquee from "../components/landing/Eventtypesmarquee";
 import HowItWorks from "../components/landing/HowItWorks";
 import Features from "../components/landing/Features";
 import AuthSection from "../components/landing/AuthSection";
@@ -29,6 +30,7 @@ export default function LandingPage() {
         <Navbar />
         <main>
           <Hero />
+          <EventTypesMarquee />
           <HowItWorks />
           <Features />
           <AuthSection />

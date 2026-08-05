@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import Loader from "../components/common/Loader";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 
 const THEMES = [
   { value: "classic", label: "Classic", color: "#C9A87C" },
@@ -978,86 +979,428 @@ export default function MyEvent() {
   // Masonry columns
   const cols = Array.from({ length: columns }, () => []);
   media.forEach((item, i) => cols[i % columns].push(item));
-
   return (
-    <div className="min-h-svh bg-ivory">
-      {saving && <SavingDialog status={saveStatus} />}
-      {uploadingMedia && (
-        <UploadingDialog
-          current={uploadProgress.current}
-          total={uploadProgress.total}
-        />
-      )}
-      {showQR && ceremony && (
-        <QRSheet ceremony={ceremony} onClose={() => setShowQR(false)} />
-      )}
-      {toDelete && (
-        <DeleteMediaDialog
-          onConfirm={handleDeleteMedia}
-          onCancel={() => setToDelete(null)}
-          loading={deleteLoading}
-        />
-      )}
-      {deleteEventStep && (
-        <DeleteEventDialog
-          eventName={ceremony?.name ?? ""}
-          step={deleteEventStep}
-          onConfirm={handleDeleteEvent}
-          onCancel={() => {
-            if (!deleteEventLoading) setDeleteEventStep(null);
-          }}
-          loading={deleteEventLoading}
-        />
-      )}
-      {deleteEventSuccess && (
-        <DeleteEventSuccessDialog
-          eventName={ceremony?.name ?? ""}
-          onDone={() => navigate("/dashboard", { replace: true })}
-        />
-      )}
-      {showDiscard && (
-        <DiscardDialog
-          onConfirm={confirmDiscard}
-          onCancel={() => setShowDiscard(false)}
-        />
-      )}
+    <div className="min-h-svh relative">
+      <BubbleBackground
+        interactive
+        colors={{
+          first: "201,168,124",
+          second: "221,168,160",
+          third: "168,191,160",
+          fourth: "212,184,150",
+          fifth: "232,197,192",
+          sixth: "141,170,132",
+        }}
+        className="fixed inset-0 z-0"
+      />
+      <div className="relative z-10">
+        {saving && <SavingDialog status={saveStatus} />}
+        {uploadingMedia && (
+          <UploadingDialog
+            current={uploadProgress.current}
+            total={uploadProgress.total}
+          />
+        )}
+        {showQR && ceremony && (
+          <QRSheet ceremony={ceremony} onClose={() => setShowQR(false)} />
+        )}
+        {toDelete && (
+          <DeleteMediaDialog
+            onConfirm={handleDeleteMedia}
+            onCancel={() => setToDelete(null)}
+            loading={deleteLoading}
+          />
+        )}
+        {deleteEventStep && (
+          <DeleteEventDialog
+            eventName={ceremony?.name ?? ""}
+            step={deleteEventStep}
+            onConfirm={handleDeleteEvent}
+            onCancel={() => {
+              if (!deleteEventLoading) setDeleteEventStep(null);
+            }}
+            loading={deleteEventLoading}
+          />
+        )}
+        {deleteEventSuccess && (
+          <DeleteEventSuccessDialog
+            eventName={ceremony?.name ?? ""}
+            onDone={() => navigate("/dashboard", { replace: true })}
+          />
+        )}
+        {showDiscard && (
+          <DiscardDialog
+            onConfirm={confirmDiscard}
+            onCancel={() => setShowDiscard(false)}
+          />
+        )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
-            className="btn-ghost px-2 py-1.5"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
-          </button>
-          <div>
-            <p className="text-xs text-text-sm font-sans">Owner</p>
-            <h2 className="text-lg font-light text-text-h font-display leading-tight">
-              {loading ? (
-                <span className="skeleton inline-block w-28 h-5 rounded" />
-              ) : (
-                "Manage event"
-              )}
-            </h2>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {!loading && ceremony && (
+        {/* Header */}
+        <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowQR(true)}
+              onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
+              className="btn-ghost px-2 py-1.5"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+            <div>
+              <p className="text-xs text-text-sm font-sans">Owner</p>
+              <h2 className="text-lg font-light text-text-h font-display leading-tight">
+                {loading ? (
+                  <span className="skeleton inline-block w-28 h-5 rounded" />
+                ) : (
+                  "Manage event"
+                )}
+              </h2>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!loading && ceremony && (
+              <button
+                onClick={() => setShowQR(true)}
+                className="btn-secondary gap-2 text-sm"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+                  />
+                </svg>
+                QR Code
+              </button>
+            )}
+          </div>
+        </header>
+
+        <main className="page pt-6 pb-28 max-w-2xl">
+          {error && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
+              </svg>
+              {error}
+              <button onClick={() => setError(null)} className="ml-auto">
+                ×
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex flex-col gap-7">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass-sm p-5 flex flex-col gap-3">
+                  <div className="skeleton h-4 w-28 rounded" />
+                  <div className="skeleton h-10 w-full rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-7">
+              {/* Name */}
+              <div className="glass-sm p-5 flex flex-col gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                    Event name <span className="text-rose-400">*</span>
+                  </label>
+                  <p className="text-xs text-text-sm font-sans mb-2">
+                    The title shown to all guests in the gallery.
+                  </p>
+                  <input
+                    className="input"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={80}
+                  />
+                </div>
+              </div>
+
+              {/* Cover */}
+              <div className="glass-sm p-5 flex flex-col gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                    Cover photo
+                  </label>
+                  <p className="text-xs text-text-sm font-sans mb-3">
+                    Appears at the top of your event gallery.
+                  </p>
+                </div>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCoverChange}
+                />
+                {coverPreview ? (
+                  <div
+                    className="relative rounded-2xl overflow-hidden border border-border shadow-soft"
+                    style={{ maxHeight: 240 }}
+                  >
+                    <img
+                      src={coverPreview}
+                      alt="cover"
+                      className="w-full object-cover"
+                      style={{ maxHeight: 240 }}
+                    />
+                    <div className="absolute inset-0 flex items-end justify-end p-2">
+                      <button
+                        onClick={() => coverInputRef.current?.click()}
+                        className="btn-secondary text-xs px-3 py-1.5 gap-1.5"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+                          />
+                        </svg>
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => coverInputRef.current?.click()}
+                    className="w-full rounded-2xl border-2 border-dashed border-border hover:border-accent/40 hover:bg-parchment/30 transition-all py-10 flex flex-col items-center gap-2"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-parchment flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-text-sm"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-sans text-text-sm">
+                      Tap to add cover photo
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Theme */}
+              <div className="glass-sm p-5 flex flex-col gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                    Theme
+                  </label>
+                  <p className="text-xs text-text-sm font-sans mb-3">
+                    Colour accent displayed in your gallery.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {THEMES.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => setTheme(t.value)}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-sans transition-all ${theme === t.value ? "border-accent bg-accent/10 text-text-h font-medium" : "border-border bg-surface/40 text-text-sm hover:border-accent/40"}`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10"
+                        style={{ background: t.color }}
+                      />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Add media section */}
+              <div className="glass-sm p-5 flex flex-col gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                    Add media
+                  </label>
+                  <p className="text-xs text-text-sm font-sans mb-3">
+                    Add more photos or videos to the event. These will be saved
+                    when you tap Save changes. Max 10 MB per file.
+                  </p>
+                </div>
+                <input
+                  ref={mediaInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleNewMediaAdd}
+                />
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {newMediaFiles.map((item) => (
+                    <NewMediaThumb
+                      key={item.id}
+                      item={item}
+                      onRemove={(id) =>
+                        setNewMediaFiles((p) => p.filter((f) => f.id !== id))
+                      }
+                    />
+                  ))}
+                  <button
+                    onClick={() => mediaInputRef.current?.click()}
+                    className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                      />
+                    </svg>
+                    <span className="text-[11px] font-sans">Add</span>
+                  </button>
+                </div>
+                {newMediaFiles.length > 0 && (
+                  <p className="text-xs text-text-sm font-sans">
+                    {newMediaFiles.length} file
+                    {newMediaFiles.length !== 1 ? "s" : ""} queued — will upload
+                    on Save
+                  </p>
+                )}
+              </div>
+
+              {/* Existing media grid */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h3 className="text-sm font-medium text-text-h font-sans">
+                    All media
+                  </h3>
+                  <p className="text-xs text-text-sm font-sans mt-0.5">
+                    {media.length} {media.length === 1 ? "item" : "items"} — as
+                    owner you can delete any file
+                  </p>
+                </div>
+                {media.length === 0 ? (
+                  <div className="glass-sm p-8 flex flex-col items-center gap-3 rounded-2xl">
+                    <div className="w-12 h-12 rounded-full bg-parchment border border-border flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-text-sm"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-text-sm font-sans text-center">
+                      No media yet. Share the QR code with guests to start
+                      collecting memories.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    {cols.map((col, ci) => (
+                      <div key={ci} className="flex-1 flex flex-col">
+                        {col.map((item) => (
+                          <MediaCard
+                            key={item.id}
+                            item={item}
+                            onDelete={setToDelete}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Danger zone */}
+              <div className="glass-sm p-5 flex flex-col gap-3 border border-rose-200/50">
+                <div>
+                  <h3 className="text-sm font-medium text-rose-400 font-sans">
+                    Danger zone
+                  </h3>
+                  <p className="text-xs text-text-sm font-sans mt-0.5">
+                    Deleting this event is permanent. All media will be removed
+                    from storage.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDeleteEventStep("warn")}
+                  className="btn flex items-center gap-2 text-sm text-rose-400 border border-rose-200/60 bg-rose-50/30 hover:bg-rose-50/60 hover:border-rose-300 active:scale-95 transition-all self-start"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                    />
+                  </svg>
+                  Delete this event
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Bottom bar */}
+        {!loading && (
+          <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
+            <button
+              onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
               className="btn-secondary gap-2 text-sm"
             >
               <svg
@@ -1070,211 +1413,41 @@ export default function MyEvent() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.641 0-8.58-3.007-9.963-7.178z"
                 />
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              QR Code
+              View gallery
             </button>
-          )}
-        </div>
-      </header>
-
-      <main className="page pt-6 pb-28 max-w-2xl">
-        {error && (
-          <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
-            <svg
-              className="w-4 h-4 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+            <button
+              onClick={handleSave}
+              className="btn-primary flex-1 justify-center gap-2"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-              />
-            </svg>
-            {error}
-            <button onClick={() => setError(null)} className="ml-auto">
-              ×
-            </button>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex flex-col gap-7">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-sm p-5 flex flex-col gap-3">
-                <div className="skeleton h-4 w-28 rounded" />
-                <div className="skeleton h-10 w-full rounded-xl" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-7">
-            {/* Name */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Event name <span className="text-rose-400">*</span>
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-2">
-                  The title shown to all guests in the gallery.
-                </p>
-                <input
-                  className="input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={80}
-                />
-              </div>
-            </div>
-
-            {/* Cover */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Cover photo
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  Appears at the top of your event gallery.
-                </p>
-              </div>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverChange}
-              />
-              {coverPreview ? (
-                <div
-                  className="relative rounded-2xl overflow-hidden border border-border shadow-soft"
-                  style={{ maxHeight: 240 }}
-                >
-                  <img
-                    src={coverPreview}
-                    alt="cover"
-                    className="w-full object-cover"
-                    style={{ maxHeight: 240 }}
-                  />
-                  <div className="absolute inset-0 flex items-end justify-end p-2">
-                    <button
-                      onClick={() => coverInputRef.current?.click()}
-                      className="btn-secondary text-xs px-3 py-1.5 gap-1.5"
-                    >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                        />
-                      </svg>
-                      Change
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => coverInputRef.current?.click()}
-                  className="w-full rounded-2xl border-2 border-dashed border-border hover:border-accent/40 hover:bg-parchment/30 transition-all py-10 flex flex-col items-center gap-2"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-parchment flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-text-sm"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-sans text-text-sm">
-                    Tap to add cover photo
-                  </span>
-                </button>
-              )}
-            </div>
-
-            {/* Theme */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Theme
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  Colour accent displayed in your gallery.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {THEMES.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setTheme(t.value)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-sans transition-all ${theme === t.value ? "border-accent bg-accent/10 text-text-h font-medium" : "border-border bg-surface/40 text-text-sm hover:border-accent/40"}`}
-                  >
-                    <span
-                      className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10"
-                      style={{ background: t.color }}
-                    />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Add media section */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Add media
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  Add more photos or videos to the event. These will be saved
-                  when you tap Save changes. Max 10 MB per file.
-                </p>
-              </div>
-              <input
-                ref={mediaInputRef}
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-                onChange={handleNewMediaAdd}
-              />
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {newMediaFiles.map((item) => (
-                  <NewMediaThumb
-                    key={item.id}
-                    item={item}
-                    onRemove={(id) =>
-                      setNewMediaFiles((p) => p.filter((f) => f.id !== id))
-                    }
-                  />
-                ))}
-                <button
-                  onClick={() => mediaInputRef.current?.click()}
-                  className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
-                >
+              {saved ? (
+                <>
                   <svg
-                    className="w-6 h-6"
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Saved!
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -1283,175 +1456,16 @@ export default function MyEvent() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M12 4.5v15m7.5-7.5h-15"
+                      d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
                     />
                   </svg>
-                  <span className="text-[11px] font-sans">Add</span>
-                </button>
-              </div>
-              {newMediaFiles.length > 0 && (
-                <p className="text-xs text-text-sm font-sans">
-                  {newMediaFiles.length} file
-                  {newMediaFiles.length !== 1 ? "s" : ""} queued — will upload
-                  on Save
-                </p>
+                  Save changes
+                </>
               )}
-            </div>
-
-            {/* Existing media grid */}
-            <div className="flex flex-col gap-3">
-              <div>
-                <h3 className="text-sm font-medium text-text-h font-sans">
-                  All media
-                </h3>
-                <p className="text-xs text-text-sm font-sans mt-0.5">
-                  {media.length} {media.length === 1 ? "item" : "items"} — as
-                  owner you can delete any file
-                </p>
-              </div>
-              {media.length === 0 ? (
-                <div className="glass-sm p-8 flex flex-col items-center gap-3 rounded-2xl">
-                  <div className="w-12 h-12 rounded-full bg-parchment border border-border flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-text-sm"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-text-sm font-sans text-center">
-                    No media yet. Share the QR code with guests to start
-                    collecting memories.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex gap-3">
-                  {cols.map((col, ci) => (
-                    <div key={ci} className="flex-1 flex flex-col">
-                      {col.map((item) => (
-                        <MediaCard
-                          key={item.id}
-                          item={item}
-                          onDelete={setToDelete}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Danger zone */}
-            <div className="glass-sm p-5 flex flex-col gap-3 border border-rose-200/50">
-              <div>
-                <h3 className="text-sm font-medium text-rose-400 font-sans">
-                  Danger zone
-                </h3>
-                <p className="text-xs text-text-sm font-sans mt-0.5">
-                  Deleting this event is permanent. All media will be removed
-                  from storage.
-                </p>
-              </div>
-              <button
-                onClick={() => setDeleteEventStep("warn")}
-                className="btn flex items-center gap-2 text-sm text-rose-400 border border-rose-200/60 bg-rose-50/30 hover:bg-rose-50/60 hover:border-rose-300 active:scale-95 transition-all self-start"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                  />
-                </svg>
-                Delete this event
-              </button>
-            </div>
+            </button>
           </div>
         )}
-      </main>
-
-      {/* Bottom bar */}
-      {!loading && (
-        <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
-          <button
-            onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
-            className="btn-secondary gap-2 text-sm"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.641 0-8.58-3.007-9.963-7.178z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            View gallery
-          </button>
-          <button
-            onClick={handleSave}
-            className="btn-primary flex-1 justify-center gap-2"
-          >
-            {saved ? (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Saved!
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
-                  />
-                </svg>
-                Save changes
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

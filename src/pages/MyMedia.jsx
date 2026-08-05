@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 
 function getStoragePath(url) {
   const marker = "/object/public/media/";
@@ -364,64 +365,158 @@ export default function MyMedia() {
   }
 
   return (
-    <div className="min-h-svh bg-ivory">
-      <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="min-h-svh relative">
+      <BubbleBackground
+        interactive
+        colors={{
+          first: "201,168,124",
+          second: "221,168,160",
+          third: "168,191,160",
+          fourth: "212,184,150",
+          fifth: "232,197,192",
+          sixth: "141,170,132",
+        }}
+        className="fixed inset-0 z-0"
+      />
+      <div className="relative z-10">
+        <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
+          {" "}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/ceremony/${ceremonyId}`)}
+              className="btn-ghost px-2 py-1.5"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
+              </svg>
+            </button>
+            <div>
+              <p className="text-xs text-text-sm font-sans">My uploads</p>
+              <h2 className="text-lg font-light text-text-h font-display leading-tight">
+                {loading ? (
+                  <span className="skeleton inline-block w-32 h-5 rounded" />
+                ) : (
+                  (ceremony?.name ?? "Event")
+                )}
+              </h2>
+            </div>
+          </div>
           <button
-            onClick={() => navigate(`/ceremony/${ceremonyId}`)}
-            className="btn-ghost px-2 py-1.5"
+            onClick={() => setMenuOpen(true)}
+            className="w-9 h-9 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center hover:bg-accent/30 transition-colors"
+          >
+            <span className="text-xs font-medium text-gold-deep font-sans">
+              {initials}
+            </span>
+          </button>
+        </header>
+
+        {menuOpen && (
+          <ProfileMenu user={user} onClose={() => setMenuOpen(false)} />
+        )}
+        {toDelete && (
+          <DeleteDialog
+            onConfirm={handleDelete}
+            onCancel={() => setToDelete(null)}
+            loading={deleteLoading}
+          />
+        )}
+
+        <main className="page pt-6 pb-28">
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                />
+              </svg>
+              {error}
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-rose-400 hover:text-rose-600"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <SkeletonSquareGrid columns={columns} />
+          ) : media.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-16 h-16 rounded-full bg-parchment border border-border flex items-center justify-center">
+                <svg
+                  className="w-7 h-7 text-text-sm"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 5.25h18M3.75 5.25v13.5A2.25 2.25 0 006 21h12a2.25 2.25 0 002.25-2.25V5.25"
+                  />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="font-display text-lg font-light text-text-h">
+                  No uploads yet
+                </p>
+                <p className="text-sm text-text-sm font-sans mt-1">
+                  Your shared memories will appear here
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-text-sm font-sans">
+                  {media.length} {media.length === 1 ? "file" : "files"} shared
+                </p>
+              </div>
+              {/* FIX 2: uniform square grid instead of masonry */}
+              <div
+                className="grid gap-1"
+                style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+              >
+                {media.map((item) => (
+                  <SquareMediaCard
+                    key={item.id}
+                    item={item}
+                    onDelete={setToDelete}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </main>
+
+        <div className="fixed bottom-6 inset-x-0 flex justify-center z-30 pointer-events-none">
+          <button
+            onClick={() => navigate(`/ceremony/${ceremonyId}/upload`)}
+            className="pointer-events-auto btn-primary gap-2.5 px-6 py-3 rounded-2xl shadow-glass-lg text-base"
           >
             <svg
               className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
-          </button>
-          <div>
-            <p className="text-xs text-text-sm font-sans">My uploads</p>
-            <h2 className="text-lg font-light text-text-h font-display leading-tight">
-              {loading ? (
-                <span className="skeleton inline-block w-32 h-5 rounded" />
-              ) : (
-                (ceremony?.name ?? "Event")
-              )}
-            </h2>
-          </div>
-        </div>
-        <button
-          onClick={() => setMenuOpen(true)}
-          className="w-9 h-9 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center hover:bg-accent/30 transition-colors"
-        >
-          <span className="text-xs font-medium text-gold-deep font-sans">
-            {initials}
-          </span>
-        </button>
-      </header>
-
-      {menuOpen && (
-        <ProfileMenu user={user} onClose={() => setMenuOpen(false)} />
-      )}
-      {toDelete && (
-        <DeleteDialog
-          onConfirm={handleDelete}
-          onCancel={() => setToDelete(null)}
-          loading={deleteLoading}
-        />
-      )}
-
-      <main className="page pt-6 pb-28">
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
-            <svg
-              className="w-4 h-4 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -430,91 +525,12 @@ export default function MyMedia() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                d="M12 4.5v15m7.5-7.5h-15"
               />
             </svg>
-            {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-rose-400 hover:text-rose-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        {loading ? (
-          <SkeletonSquareGrid columns={columns} />
-        ) : media.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-16 h-16 rounded-full bg-parchment border border-border flex items-center justify-center">
-              <svg
-                className="w-7 h-7 text-text-sm"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 5.25h18M3.75 5.25v13.5A2.25 2.25 0 006 21h12a2.25 2.25 0 002.25-2.25V5.25"
-                />
-              </svg>
-            </div>
-            <div className="text-center">
-              <p className="font-display text-lg font-light text-text-h">
-                No uploads yet
-              </p>
-              <p className="text-sm text-text-sm font-sans mt-1">
-                Your shared memories will appear here
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-text-sm font-sans">
-                {media.length} {media.length === 1 ? "file" : "files"} shared
-              </p>
-            </div>
-            {/* FIX 2: uniform square grid instead of masonry */}
-            <div
-              className="grid gap-1"
-              style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
-            >
-              {media.map((item) => (
-                <SquareMediaCard
-                  key={item.id}
-                  item={item}
-                  onDelete={setToDelete}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </main>
-
-      <div className="fixed bottom-6 inset-x-0 flex justify-center z-30 pointer-events-none">
-        <button
-          onClick={() => navigate(`/ceremony/${ceremonyId}/upload`)}
-          className="pointer-events-auto btn-primary gap-2.5 px-6 py-3 rounded-2xl shadow-glass-lg text-base"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 4.5v15m7.5-7.5h-15"
-            />
-          </svg>
-          Add media
-        </button>
+            Add media
+          </button>
+        </div>
       </div>
     </div>
   );

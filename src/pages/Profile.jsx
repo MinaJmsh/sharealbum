@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 
 // ── Icons ─────────────────────────────────────────────────────────
 const LogoIcon = () => (
@@ -204,186 +205,199 @@ export default function Profile() {
   const strength = pwStrength(newPw);
 
   return (
-    <div className="min-h-svh flex flex-col">
-      <header
-        className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
-        style={{
-          background:
-            "linear-gradient(135deg,rgba(255,252,248,0.88) 0%,rgba(250,247,242,0.78) 100%)",
+    <div className="min-h-svh relative">
+      <BubbleBackground
+        interactive
+        colors={{
+          first: "201,168,124",
+          second: "221,168,160",
+          third: "168,191,160",
+          fourth: "212,184,150",
+          fifth: "232,197,192",
+          sixth: "141,170,132",
         }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <Link
-            to="/dashboard"
-            className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
-          >
-            <LogoIcon />
-            <span className="font-display text-lg font-light text-text-h tracking-wide">
-              ShareAlbum
-            </span>
-          </Link>
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="btn-ghost text-sm gap-1.5"
-          >
-            <ArrowLeftIcon /> Dashboard
-          </button>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 py-10 w-full">
-        {/* Avatar + heading */}
-        <div className="flex flex-col items-center text-center mb-10 gap-3">
-          <div className="w-20 h-20 rounded-full glass border-2 border-accent/30 flex items-center justify-center text-2xl font-display font-light text-accent shadow-glass">
-            {initials}
-          </div>
-          <div>
-            <h1 className="font-display text-3xl font-light text-text-h">
-              {displayName || email.split("@")[0]}
-            </h1>
-            <p className="text-text-sm text-sm mt-0.5">{email}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-5">
-          {/* ── Display Name ────────────────────────────── */}
-          <Card title="Display Name">
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="block text-xs font-medium text-text-sm mb-1.5">
-                  Full name
-                </label>
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="Your display name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-sm mb-1.5">
-                  Email address
-                </label>
-                <input
-                  className="input opacity-60 cursor-not-allowed"
-                  type="email"
-                  value={email}
-                  readOnly
-                  tabIndex={-1}
-                />
-                <p className="text-text-sm text-xs mt-1">
-                  Email cannot be changed.
-                </p>
-              </div>
-              <button
-                onClick={handleSaveName}
-                disabled={savingName}
-                className="btn-primary self-start"
-              >
-                {savingName ? "Saving…" : "Save changes"}
-              </button>
-            </div>
-          </Card>
-
-          {/* ── Change Password ──────────────────────────── */}
-          <Card title="Change Password">
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="block text-xs font-medium text-text-sm mb-1.5">
-                  New password
-                </label>
-                <div className="relative">
-                  <input
-                    className="input pr-10"
-                    type={showNew ? "text" : "password"}
-                    placeholder="New password"
-                    value={newPw}
-                    onChange={(e) => setNewPw(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
-                    onClick={() => setShowNew(!showNew)}
-                  >
-                    <EyeIcon open={showNew} />
-                  </button>
-                </div>
-                {strength && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="flex-1 h-1 bg-parchment rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${strength.color} ${strength.w}`}
-                      />
-                    </div>
-                    <span className="text-xs text-text-sm">
-                      {strength.label}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-sm mb-1.5">
-                  Confirm new password
-                </label>
-                <div className="relative">
-                  <input
-                    className={`input pr-10 ${confirmPw && confirmPw !== newPw ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""}`}
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirm new password"
-                    value={confirmPw}
-                    onChange={(e) => setConfirmPw(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                  >
-                    <EyeIcon open={showConfirm} />
-                  </button>
-                </div>
-                {confirmPw && confirmPw !== newPw && (
-                  <p className="text-red-400 text-xs mt-1">
-                    Passwords don't match.
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={handleChangePassword}
-                disabled={savingPw || !newPw || !confirmPw}
-                className="btn-primary self-start disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingPw ? "Updating…" : "Update password"}
-              </button>
-            </div>
-          </Card>
-
-          {/* ── Sign out — subtle row, no heavy card ── */}
-          <div className="flex items-center justify-between px-2 py-1">
-            <p className="text-xs text-text-sm">
-              Signed in as <span className="text-text">{email}</span>
-            </p>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm text-rose-400 hover:text-rose-600 transition-colors"
+        className="fixed inset-0 z-0"
+      />
+      <div className="relative z-10 flex flex-col min-h-svh">
+        <header
+          className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
+          style={{
+            background:
+              "linear-gradient(135deg,rgba(255,252,248,0.88) 0%,rgba(250,247,242,0.78) 100%)",
+          }}
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
             >
-              <LogOutIcon />
-              Sign out
+              <LogoIcon />
+              <span className="font-display text-lg font-light text-text-h tracking-wide">
+                ShareAlbum
+              </span>
+            </Link>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="btn-ghost text-sm gap-1.5"
+            >
+              <ArrowLeftIcon /> Dashboard
             </button>
           </div>
-        </div>
-      </main>
+        </header>
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onDone={() => setToast(null)}
-        />
-      )}
+        <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 py-10 w-full">
+          {/* Avatar + heading */}
+          <div className="flex flex-col items-center text-center mb-10 gap-3">
+            <div className="w-20 h-20 rounded-full glass border-2 border-accent/30 flex items-center justify-center text-2xl font-display font-light text-accent shadow-glass">
+              {initials}
+            </div>
+            <div>
+              <h1 className="font-display text-3xl font-light text-text-h">
+                {displayName || email.split("@")[0]}
+              </h1>
+              <p className="text-text-sm text-sm mt-0.5">{email}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            {/* ── Display Name ────────────────────────────── */}
+            <Card title="Display Name">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-text-sm mb-1.5">
+                    Full name
+                  </label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Your display name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-sm mb-1.5">
+                    Email address
+                  </label>
+                  <input
+                    className="input opacity-60 cursor-not-allowed"
+                    type="email"
+                    value={email}
+                    readOnly
+                    tabIndex={-1}
+                  />
+                  <p className="text-text-sm text-xs mt-1">
+                    Email cannot be changed.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="btn-primary self-start"
+                >
+                  {savingName ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </Card>
+
+            {/* ── Change Password ──────────────────────────── */}
+            <Card title="Change Password">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-text-sm mb-1.5">
+                    New password
+                  </label>
+                  <div className="relative">
+                    <input
+                      className="input pr-10"
+                      type={showNew ? "text" : "password"}
+                      placeholder="New password"
+                      value={newPw}
+                      onChange={(e) => setNewPw(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
+                      onClick={() => setShowNew(!showNew)}
+                    >
+                      <EyeIcon open={showNew} />
+                    </button>
+                  </div>
+                  {strength && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-parchment rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${strength.color} ${strength.w}`}
+                        />
+                      </div>
+                      <span className="text-xs text-text-sm">
+                        {strength.label}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-sm mb-1.5">
+                    Confirm new password
+                  </label>
+                  <div className="relative">
+                    <input
+                      className={`input pr-10 ${confirmPw && confirmPw !== newPw ? "border-red-300 focus:border-red-400 focus:ring-red-200" : ""}`}
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={confirmPw}
+                      onChange={(e) => setConfirmPw(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sm hover:text-text transition-colors"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                    >
+                      <EyeIcon open={showConfirm} />
+                    </button>
+                  </div>
+                  {confirmPw && confirmPw !== newPw && (
+                    <p className="text-red-400 text-xs mt-1">
+                      Passwords don't match.
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={savingPw || !newPw || !confirmPw}
+                  className="btn-primary self-start disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingPw ? "Updating…" : "Update password"}
+                </button>
+              </div>
+            </Card>
+
+            {/* ── Sign out — subtle row, no heavy card ── */}
+            <div className="flex items-center justify-between px-2 py-1">
+              <p className="text-xs text-text-sm">
+                Signed in as <span className="text-text">{email}</span>
+              </p>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-sm text-rose-400 hover:text-rose-600 transition-colors"
+              >
+                <LogOutIcon />
+                Sign out
+              </button>
+            </div>
+          </div>
+        </main>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onDone={() => setToast(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

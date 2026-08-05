@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
+import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 
 // ── Icons ────────────────────────────────────────────────────────
 const GridIcon = () => (
@@ -625,164 +626,182 @@ export default function Dashboard() {
   const hasAnyEvents = myEvents.length > 0 || joinedEvents.length > 0;
 
   return (
-    <div className="min-h-svh flex flex-col">
-      <header
-        className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
-        style={{
-          background:
-            "linear-gradient(135deg,rgba(255,252,248,0.88) 0%,rgba(250,247,242,0.78) 100%)",
+    <div className="min-h-svh relative">
+      <BubbleBackground
+        interactive
+        colors={{
+          first: "201,168,124",
+          second: "221,168,160",
+          third: "168,191,160",
+          fourth: "212,184,150",
+          fifth: "232,197,192",
+          sixth: "141,170,132",
         }}
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          <Link
-            to="/dashboard"
-            className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
-          >
-            <LogoIcon />
-            <span className="font-display text-lg font-light text-text-h tracking-wide">
-              ShareAlbum
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/ceremony/create")}
-              className="btn-primary text-sm hidden sm:inline-flex"
+        className="fixed inset-0 z-0"
+      />
+      <div className="relative z-10 flex flex-col min-h-svh">
+        <header
+          className="sticky top-0 z-50 border-b border-border backdrop-blur-md"
+          style={{
+            background:
+              "linear-gradient(135deg,rgba(255,252,248,0.88) 0%,rgba(250,247,242,0.78) 100%)",
+          }}
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
             >
-              <PlusIcon /> New Event
-            </button>
-            <button
-              onClick={() => navigate("/profile")}
-              className="w-9 h-9 rounded-full glass flex items-center justify-center text-xs font-medium text-accent border border-accent/20 hover:border-accent/50 transition-all"
-            >
-              {initials}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
-        <div className="mb-10 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-4xl font-light text-text-h">
-              Your Albums
-            </h1>
-            <p className="text-text-sm mt-1 text-sm">
-              Manage and browse all your shared memories.
-            </p>
-          </div>
-          {hasAnyEvents && (
-            <div
-              className="relative flex items-center gap-0.5 p-1 rounded-xl flex-shrink-0"
-              style={{
-                background: "rgba(255,252,248,0.6)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                border: "1px solid rgba(255,255,255,0.35)",
-                zIndex: 40,
-              }}
-            >
-              <SortDropdown value={sortMode} onChange={setSortMode} />
-              <div
-                className="w-px h-4 mx-0.5"
-                style={{ background: "rgba(0,0,0,0.1)" }}
-              />
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-md transition-all duration-150 ${viewMode === "grid" ? "bg-accent/15 text-accent" : "text-text-sm hover:text-text"}`}
-              >
-                <GridIcon />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md transition-all duration-150 ${viewMode === "list" ? "bg-accent/15 text-accent" : "text-text-sm hover:text-text"}`}
-              >
-                <ListIcon />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <section className="mb-14">
-          <div className="flex items-center gap-3 mb-5">
-            <h2 className="font-display text-2xl font-light text-text-h">
-              My Events
-            </h2>
-            {myEvents.length > 0 && (
-              <span className="badge-gold text-xs">{myEvents.length}</span>
-            )}
-          </div>
-          {myEvents.length === 0 ? (
-            <EmptyState isOwner />
-          ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {sortedMyEvents.map((e) => (
-                <GridCard key={e.id} event={e} isOwner />
-              ))}
+              <LogoIcon />
+              <span className="font-display text-lg font-light text-text-h tracking-wide">
+                ShareAlbum
+              </span>
+            </Link>
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate("/ceremony/create")}
-                className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-all duration-200 text-text-sm hover:text-accent gap-3"
-                style={{ aspectRatio: "16/9" }}
+                className="btn-primary text-sm hidden sm:inline-flex"
               >
-                <div className="w-10 h-10 rounded-xl border-2 border-dashed border-current flex items-center justify-center transition-transform group-hover:scale-110">
-                  <PlusIcon />
-                </div>
-                <span className="text-sm font-medium">Create new event</span>
+                <PlusIcon /> New Event
+              </button>
+              <button
+                onClick={() => navigate("/profile")}
+                className="w-9 h-9 rounded-full glass flex items-center justify-center text-xs font-medium text-accent border border-accent/20 hover:border-accent/50 transition-all"
+              >
+                {initials}
               </button>
             </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {sortedMyEvents.map((e) => (
-                <ListCard key={e.id} event={e} isOwner />
-              ))}
-              <ListCreateButton onClick={() => navigate("/ceremony/create")} />
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
+          <div className="mb-10 flex items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display text-4xl font-light text-text-h">
+                Your Albums
+              </h1>
+              <p className="text-text-sm mt-1 text-sm">
+                Manage and browse all your shared memories.
+              </p>
             </div>
-          )}
-        </section>
+            {hasAnyEvents && (
+              <div
+                className="relative flex items-center gap-0.5 p-1 rounded-xl flex-shrink-0"
+                style={{
+                  background: "rgba(255,252,248,0.6)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: "1px solid rgba(255,255,255,0.35)",
+                  zIndex: 40,
+                }}
+              >
+                <SortDropdown value={sortMode} onChange={setSortMode} />
+                <div
+                  className="w-px h-4 mx-0.5"
+                  style={{ background: "rgba(0,0,0,0.1)" }}
+                />
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-1.5 rounded-md transition-all duration-150 ${viewMode === "grid" ? "bg-accent/15 text-accent" : "text-text-sm hover:text-text"}`}
+                >
+                  <GridIcon />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 rounded-md transition-all duration-150 ${viewMode === "list" ? "bg-accent/15 text-accent" : "text-text-sm hover:text-text"}`}
+                >
+                  <ListIcon />
+                </button>
+              </div>
+            )}
+          </div>
 
-        {joinedEvents.length > 0 && <div className="divider mb-14 -mt-8" />}
-
-        {joinedEvents.length > 0 && (
-          <section>
+          <section className="mb-14">
             <div className="flex items-center gap-3 mb-5">
               <h2 className="font-display text-2xl font-light text-text-h">
-                Joined Events
+                My Events
               </h2>
-              <span className="badge-gold text-xs">{joinedEvents.length}</span>
+              {myEvents.length > 0 && (
+                <span className="badge-gold text-xs">{myEvents.length}</span>
+              )}
             </div>
-            {viewMode === "grid" ? (
+            {myEvents.length === 0 ? (
+              <EmptyState isOwner />
+            ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {sortedJoinedEvents.map((e) => (
-                  <GridCard key={e.id} event={e} isOwner={false} />
+                {sortedMyEvents.map((e) => (
+                  <GridCard key={e.id} event={e} isOwner />
                 ))}
+                <button
+                  onClick={() => navigate("/ceremony/create")}
+                  className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border hover:border-accent/50 transition-all duration-200 text-text-sm hover:text-accent gap-3"
+                  style={{ aspectRatio: "16/9" }}
+                >
+                  <div className="w-10 h-10 rounded-xl border-2 border-dashed border-current flex items-center justify-center transition-transform group-hover:scale-110">
+                    <PlusIcon />
+                  </div>
+                  <span className="text-sm font-medium">Create new event</span>
+                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {sortedJoinedEvents.map((e) => (
-                  <ListCard key={e.id} event={e} isOwner={false} />
+                {sortedMyEvents.map((e) => (
+                  <ListCard key={e.id} event={e} isOwner />
                 ))}
+                <ListCreateButton
+                  onClick={() => navigate("/ceremony/create")}
+                />
               </div>
             )}
           </section>
-        )}
 
-        <button
-          onClick={() => navigate("/ceremony/create")}
-          className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full btn-primary shadow-glass-lg flex items-center justify-center z-40"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
+          {joinedEvents.length > 0 && <div className="divider mb-14 -mt-8" />}
+
+          {joinedEvents.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-5">
+                <h2 className="font-display text-2xl font-light text-text-h">
+                  Joined Events
+                </h2>
+                <span className="badge-gold text-xs">
+                  {joinedEvents.length}
+                </span>
+              </div>
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {sortedJoinedEvents.map((e) => (
+                    <GridCard key={e.id} event={e} isOwner={false} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {sortedJoinedEvents.map((e) => (
+                    <ListCard key={e.id} event={e} isOwner={false} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          <button
+            onClick={() => navigate("/ceremony/create")}
+            className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full btn-primary shadow-glass-lg flex items-center justify-center z-40"
           >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-      </main>
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </main>
+      </div>
     </div>
   );
 }
