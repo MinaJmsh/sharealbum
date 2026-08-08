@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import PhoneMockup from "./PhoneMockup";
 import { WordRotate } from "../ui/word-rotate";
-
+import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   SparkleIcon,
   CameraIcon,
@@ -11,8 +11,67 @@ import {
   EASE_OUT,
 } from "./LandingPageShared";
 
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || navigator.vendor || "";
+  const uaMobile = /android|iphone|ipad|ipod|mobile/i.test(ua);
+  const touchMobile =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(pointer: coarse)")?.matches;
+  return uaMobile || !!touchMobile;
+}
+
 export default function Hero() {
   const [scanHover, setScanHover] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const cameraInputRef = useRef(null);
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice());
+  }, []);
+
+  const handleScanClick = () => {
+    if (isMobile) {
+      // Hidden capture input opens the device's native camera directly.
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleCameraCapture = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // TODO: hand off to QR decode / gallery-open flow once captured.
+    e.target.value = "";
+  };
+
+  const scanButton = (
+    <button
+      onMouseEnter={() => setScanHover(true)}
+      onMouseLeave={() => setScanHover(false)}
+      onClick={handleScanClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "13px 26px",
+        borderRadius: "14px",
+        background: "linear-gradient(135deg,#C9A87C 0%,#B8905E 100%)",
+        color: "#FAF7F2",
+        fontFamily: "'DM Sans',sans-serif",
+        fontSize: "0.92rem",
+        fontWeight: 500,
+        border: "none",
+        boxShadow: scanHover
+          ? "0 10px 32px rgba(201,168,124,0.55)"
+          : "0 4px 20px rgba(201,168,124,0.4)",
+        cursor: "pointer",
+        transform: scanHover ? "translateY(-2px)" : "translateY(0)",
+        transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
+      }}
+    >
+      <CameraIcon size={18} /> Scan to open gallery
+    </button>
+  );
 
   return (
     <section
@@ -128,31 +187,75 @@ export default function Hero() {
                 animation: "fadeUp 0.6s ease both 0.45s",
               }}
             >
-              <button
-                onMouseEnter={() => setScanHover(true)}
-                onMouseLeave={() => setScanHover(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "13px 26px",
-                  borderRadius: "14px",
-                  background: "linear-gradient(135deg,#C9A87C 0%,#B8905E 100%)",
-                  color: "#FAF7F2",
-                  fontFamily: "'DM Sans',sans-serif",
-                  fontSize: "0.92rem",
-                  fontWeight: 500,
-                  border: "none",
-                  boxShadow: scanHover
-                    ? "0 10px 32px rgba(201,168,124,0.55)"
-                    : "0 4px 20px rgba(201,168,124,0.4)",
-                  cursor: "pointer",
-                  transform: scanHover ? "translateY(-2px)" : "translateY(0)",
-                  transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
-                }}
-              >
-                <CameraIcon size={18} /> Scan to open gallery
-              </button>
+              {isMobile ? (
+                scanButton
+              ) : (
+                <Tooltip.Provider delayDuration={100}>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>{scanButton}</Tooltip.Trigger>
+
+                    <Tooltip.Portal>
+                      <Tooltip.Content
+                        side="top"
+                        sideOffset={12}
+                        style={{
+                          zIndex: 99999,
+                          background: "#FAF7F2",
+                          border: "1px solid rgba(201,168,124,0.5)",
+                          borderRadius: "14px",
+                          padding: "14px 16px",
+                          width: "250px",
+                          boxShadow: "0 10px 30px rgba(46,37,32,0.12)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: "'Cormorant Garamond', Georgia, serif",
+                            fontSize: "1.15rem",
+                            fontWeight: 600,
+                            color: "#2E2520",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          Scan with your phone
+                        </div>
+
+                        <p
+                          style={{
+                            fontFamily: "'DM Sans', sans-serif",
+                            fontSize: "0.82rem",
+                            lineHeight: 1.55,
+                            color: "#5C5148",
+                            margin: 0,
+                          }}
+                        >
+                          Use your phone's camera to scan the QR code on your
+                          table. Tap the link that appears to open the gallery.
+                        </p>
+
+                        <Tooltip.Arrow
+                          style={{
+                            fill: "#FAF7F2",
+                          }}
+                        />
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              )}
+
+              {/* Hidden capture input — triggers the native camera on mobile */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleCameraCapture}
+                style={{ display: "none" }}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+
               <a
                 href="#auth"
                 style={{

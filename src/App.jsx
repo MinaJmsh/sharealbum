@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
@@ -17,7 +18,6 @@ import Landing from "./pages/LandingPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { useEffect } from "react";
 function PageTitle() {
   const location = useLocation();
 
@@ -46,7 +46,28 @@ function PageTitle() {
 
   return null;
 }
+
+function useToastPosition() {
+  const [position, setPosition] = useState(
+    typeof window !== "undefined" && window.innerWidth < 640
+      ? "top-center"
+      : "bottom-right",
+  );
+
+  useEffect(() => {
+    function update() {
+      setPosition(window.innerWidth < 640 ? "top-center" : "bottom-right");
+    }
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return position;
+}
+
 function App() {
+  const toastPosition = useToastPosition();
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -110,15 +131,13 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />{" "}
         </Routes>{" "}
         <ToastContainer
-          position="bottom-right"
+          position={toastPosition}
           autoClose={4000}
           hideProgressBar={false}
           newestOnTop
           closeOnClick
           pauseOnHover
           theme="light"
-          toastClassName="!p-0 !min-h-0 !shadow-none !bg-transparent"
-          bodyClassName="!p-0 !m-0"
           style={{ "--toastify-color-progress-light": "#C9A87C" }}
         />
       </BrowserRouter>

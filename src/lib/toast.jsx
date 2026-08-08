@@ -47,6 +47,19 @@ const TOAST_CSS = `
   height: 3px !important;
   opacity: 0.85 !important;
 }
+
+/* Mobile: toast enters top-center, offset below the fixed navbar (h-14 = 56px)
+   instead of sitting flush against the top edge or overlapping the navbar. */
+@media (max-width: 640px) {
+  .Toastify__toast-container--top-center {
+    top: 68px !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 380px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    padding: 0;
+  }
+}
 `;
 
 if (typeof document !== "undefined") {
