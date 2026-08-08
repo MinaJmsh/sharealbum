@@ -4,18 +4,8 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import Loader from "../components/common/Loader";
-import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 
 const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin;
-
-const THEMES = [
-  { value: "classic", label: "Classic", color: "#C9A87C" },
-  { value: "romantic", label: "Romantic", color: "#E8C5C0" },
-  { value: "modern", label: "Modern", color: "#8B9E8A" },
-  { value: "rustic", label: "Rustic", color: "#A0856C" },
-  { value: "garden", label: "Garden", color: "#B5C9A8" },
-  { value: "beach", label: "Beach", color: "#A8C4C9" },
-];
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 function getFilePreview(file) {
@@ -337,7 +327,6 @@ export default function CreateEvent() {
   const user = session?.user;
 
   const [name, setName] = useState("");
-  const [theme, setTheme] = useState("classic");
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [mediaFiles, setMediaFiles] = useState([]);
@@ -430,7 +419,6 @@ export default function CreateEvent() {
         .insert({
           owner_id: user.id,
           name: name.trim(),
-          theme,
           cover_url: coverUrl,
           qr_code: "",
         })
@@ -472,241 +460,145 @@ export default function CreateEvent() {
   }
 
   return (
-    <div className="min-h-svh relative">
-      <BubbleBackground
-        interactive
-        colors={{
-          first: "201,168,124",
-          second: "221,168,160",
-          third: "168,191,160",
-          fourth: "212,184,150",
-          fifth: "232,197,192",
-          sixth: "141,170,132",
-        }}
-        className="fixed inset-0 z-0"
-      />
-      <div className="relative z-10">
-        {creating && <CreatingDialog status={status} />}
-        {created && <QRDialog ceremony={created} />}
-        {showDiscard && (
-          <DiscardDialog
-            onConfirm={confirmDiscard}
-            onCancel={() => setShowDiscard(false)}
-          />
-        )}
+    <div className="min-h-svh bg-ivory">
+      {creating && <CreatingDialog status={status} />}
+      {created && <QRDialog ceremony={created} />}
+      {showDiscard && (
+        <DiscardDialog
+          onConfirm={confirmDiscard}
+          onCancel={() => setShowDiscard(false)}
+        />
+      )}
 
-        <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => tryNavigate("/dashboard")}
-            className="btn-ghost px-2 py-1.5"
+      <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={() => tryNavigate("/dashboard")}
+          className="btn-ghost px-2 py-1.5"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
           >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 19.5L8.25 12l7.5-7.5"
+            />
+          </svg>
+        </button>
+        <div>
+          <p className="text-xs text-text-sm font-sans">New event</p>
+          <h2 className="text-lg font-light text-text-h font-display leading-tight">
+            Create ceremony
+          </h2>
+        </div>
+      </header>
+
+      <main className="page pt-6 pb-28 max-w-2xl">
+        {error && (
+          <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              strokeWidth={1.5}
+              strokeWidth={2}
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
               />
             </svg>
-          </button>
-          <div>
-            <p className="text-xs text-text-sm font-sans">New event</p>
-            <h2 className="text-lg font-light text-text-h font-display leading-tight">
-              Create ceremony
-            </h2>
+            {error}
+            <button onClick={() => setError(null)} className="ml-auto">
+              ×
+            </button>
           </div>
-        </header>
+        )}
 
-        <main className="page pt-6 pb-28 max-w-2xl">
-          {error && (
-            <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
+        <div className="flex flex-col gap-7">
+          {/* Name */}
+          <div className="glass-sm p-5 flex flex-col gap-3">
+            <div>
+              <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                Event name <span className="text-rose-400">*</span>
+              </label>
+              <p className="text-xs text-text-sm font-sans mb-2">
+                Give your ceremony a memorable title that guests will recognise.
+              </p>
+              <input
+                className="input"
+                placeholder="e.g. Sarah & James — June 2026"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+              />
+            </div>
+          </div>
+
+          {/* Cover */}
+          <div className="glass-sm p-5 flex flex-col gap-3">
+            <div>
+              <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                Cover photo
+              </label>
+              <p className="text-xs text-text-sm font-sans mb-3">
+                This appears at the top of the gallery. A portrait shot works
+                best.
+              </p>
+            </div>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverChange}
+            />
+            {coverPreview ? (
+              <div
+                className="relative rounded-2xl overflow-hidden border border-border shadow-soft"
+                style={{ maxHeight: 240 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                />
-              </svg>
-              {error}
-              <button onClick={() => setError(null)} className="ml-auto">
-                ×
-              </button>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-7">
-            {/* Name */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Event name <span className="text-rose-400">*</span>
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-2">
-                  Give your ceremony a memorable title that guests will
-                  recognise.
-                </p>
-                <input
-                  className="input"
-                  placeholder="e.g. Sarah & James — June 2026"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={80}
-                />
-              </div>
-            </div>
-
-            {/* Cover */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Cover photo
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  This appears at the top of the gallery. A portrait shot works
-                  best.
-                </p>
-              </div>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCoverChange}
-              />
-              {coverPreview ? (
-                <div
-                  className="relative rounded-2xl overflow-hidden border border-border shadow-soft"
+                <img
+                  src={coverPreview}
+                  alt="cover"
+                  className="w-full h-full object-cover"
                   style={{ maxHeight: 240 }}
-                >
-                  <img
-                    src={coverPreview}
-                    alt="cover"
-                    className="w-full h-full object-cover"
-                    style={{ maxHeight: 240 }}
-                  />
-                  <button
-                    onClick={() => {
-                      setCoverFile(null);
-                      setCoverPreview(null);
-                    }}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm border border-white/50 flex items-center justify-center hover:bg-rose-50 hover:border-rose-200 transition-all shadow-soft"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5 text-rose-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
+                />
                 <button
-                  onClick={() => coverInputRef.current?.click()}
-                  className="w-full rounded-2xl border-2 border-dashed border-border hover:border-accent/40 hover:bg-parchment/30 transition-all py-10 flex flex-col items-center gap-2"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-parchment flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-text-sm"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-sans text-text-sm">
-                    Tap to add cover photo
-                  </span>
-                </button>
-              )}
-            </div>
-
-            {/* Theme */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Theme
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  Sets the colour accent for your event gallery.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {THEMES.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setTheme(t.value)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-sans transition-all ${theme === t.value ? "border-accent bg-accent/10 text-text-h font-medium" : "border-border bg-surface/40 text-text-sm hover:border-accent/40"}`}
-                  >
-                    <span
-                      className="w-4 h-4 rounded-full flex-shrink-0 border border-black/10"
-                      style={{ background: t.color }}
-                    />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Media */}
-            <div className="glass-sm p-5 flex flex-col gap-3">
-              <div>
-                <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
-                  Add media{" "}
-                  <span className="text-text-sm font-normal">(optional)</span>
-                </label>
-                <p className="text-xs text-text-sm font-sans mb-3">
-                  Upload photos or videos now, or do it later from the event
-                  page. Max 10 MB per file.
-                </p>
-              </div>
-              <input
-                ref={mediaInputRef}
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-                onChange={handleMediaAdd}
-              />
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {mediaFiles.map((item) => (
-                  <MediaThumb
-                    key={item.id}
-                    item={item}
-                    onRemove={(id) =>
-                      setMediaFiles((p) => p.filter((f) => f.id !== id))
-                    }
-                  />
-                ))}
-                <button
-                  onClick={() => mediaInputRef.current?.click()}
-                  className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
+                  onClick={() => {
+                    setCoverFile(null);
+                    setCoverPreview(null);
+                  }}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/80 backdrop-blur-sm border border-white/50 flex items-center justify-center hover:bg-rose-50 hover:border-rose-200 transition-all shadow-soft"
                 >
                   <svg
-                    className="w-6 h-6"
+                    className="w-3.5 h-3.5 text-rose-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full rounded-2xl border-2 border-dashed border-border hover:border-accent/40 hover:bg-parchment/30 transition-all py-10 flex flex-col items-center gap-2"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-parchment flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-text-sm"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -715,49 +607,103 @@ export default function CreateEvent() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M12 4.5v15m7.5-7.5h-15"
+                      d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                     />
                   </svg>
-                  <span className="text-[11px] font-sans">Add</span>
-                </button>
-              </div>
-              {mediaFiles.length > 0 && (
-                <p className="text-xs text-text-sm font-sans">
-                  {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""}{" "}
-                  ready to upload
-                </p>
-              )}
-            </div>
+                </div>
+                <span className="text-sm font-sans text-text-sm">
+                  Tap to add cover photo
+                </span>
+              </button>
+            )}
           </div>
-        </main>
 
-        <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
-          <button
-            onClick={() => tryNavigate("/dashboard")}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            className="btn-primary flex-1 justify-center"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Create event
-          </button>
+          {/* Media */}
+          <div className="glass-sm p-5 flex flex-col gap-3">
+            <div>
+              <label className="text-sm font-medium text-text-h font-sans block mb-0.5">
+                Add media{" "}
+                <span className="text-text-sm font-normal">(optional)</span>
+              </label>
+              <p className="text-xs text-text-sm font-sans mb-3">
+                Upload photos or videos now, or do it later from the event page.
+                Max 10 MB per file.
+              </p>
+            </div>
+            <input
+              ref={mediaInputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="hidden"
+              onChange={handleMediaAdd}
+            />
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {mediaFiles.map((item) => (
+                <MediaThumb
+                  key={item.id}
+                  item={item}
+                  onRemove={(id) =>
+                    setMediaFiles((p) => p.filter((f) => f.id !== id))
+                  }
+                />
+              ))}
+              <button
+                onClick={() => mediaInputRef.current?.click()}
+                className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-accent/50 hover:bg-parchment/30 flex flex-col items-center justify-center gap-1.5 transition-all text-text-sm hover:text-text"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 4.5v15m7.5-7.5h-15"
+                  />
+                </svg>
+                <span className="text-[11px] font-sans">Add</span>
+              </button>
+            </div>
+            {mediaFiles.length > 0 && (
+              <p className="text-xs text-text-sm font-sans">
+                {mediaFiles.length} file{mediaFiles.length !== 1 ? "s" : ""}{" "}
+                ready to upload
+              </p>
+            )}
+          </div>
         </div>
+      </main>
+
+      <div className="fixed bottom-0 inset-x-0 z-30 glass-sm border-t border-border px-4 py-4 flex items-center gap-3 max-w-2xl mx-auto">
+        <button
+          onClick={() => tryNavigate("/dashboard")}
+          className="btn-secondary"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleCreate}
+          className="btn-primary flex-1 justify-center"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Create event
+        </button>
       </div>
     </div>
   );

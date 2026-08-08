@@ -4,6 +4,8 @@ import { motion, useMotionValue, useSpring } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
+const rand = (min, max) => Math.random() * (max - min) + min;
+
 function BubbleBackground({
   ref,
   className,
@@ -33,6 +35,19 @@ function BubbleBackground({
   const rectRef = React.useRef(null);
   const rafIdRef = React.useRef(null);
 
+  // Random starting positions/orbit-origins — computed once per mount so
+  // bubbles are scattered on load instead of piling up in the center.
+  const layout = React.useMemo(
+    () => ({
+      first: { top: `${rand(-15, 45)}%`, left: `${rand(-15, 45)}%` },
+      second: { originX: rand(-450, 450), originY: rand(-250, 250) },
+      third: { originX: rand(-450, 450), originY: rand(-250, 250) },
+      fourth: { top: `${rand(-15, 45)}%`, left: `${rand(-15, 45)}%` },
+      fifth: { originX: rand(-700, -100), originY: rand(-150, 250) },
+    }),
+    [],
+  );
+
   React.useLayoutEffect(() => {
     const updateRect = () => {
       if (containerRef.current) {
@@ -55,6 +70,7 @@ function BubbleBackground({
       window.removeEventListener("scroll", updateRect);
     };
   }, []);
+
   React.useEffect(() => {
     if (!interactive) return;
 
@@ -79,6 +95,7 @@ function BubbleBackground({
       if (rafIdRef.current != null) cancelAnimationFrame(rafIdRef.current);
     };
   }, [interactive, mouseX, mouseY]);
+
   return (
     <div
       ref={containerRef}
@@ -126,47 +143,89 @@ function BubbleBackground({
         style={{ filter: "url(#goo) blur(40px)" }}
       >
         <motion.div
-          className="absolute rounded-full size-[80%] top-[10%] left-[10%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--first-color),0.3)_0%,rgba(var(--first-color),0)_50%)]"
-          animate={{ y: [-50, 50, -50] }}
-          transition={{ duration: 30, ease: "easeInOut", repeat: Infinity }}
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
+          className="absolute rounded-full size-[80%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--first-color),0.3)_0%,rgba(var(--first-color),0)_50%)]"
+          initial={{ opacity: 0 }}
+          animate={{ y: [-50, 50, -50], opacity: 1 }}
+          transition={{
+            y: { duration: 30, ease: "easeInOut", repeat: Infinity },
+            opacity: { duration: 1.2, ease: "easeOut" },
+          }}
+          style={{
+            top: layout.first.top,
+            left: layout.first.left,
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
         />
 
         <motion.div
-          className="absolute inset-0 flex justify-center items-center origin-[calc(50%-400px)]"
-          animate={{ rotate: 360 }}
+          className="absolute inset-0 flex justify-center items-center"
+          initial={{ opacity: 0 }}
+          animate={{ rotate: 360, opacity: 1 }}
           transition={{
-            duration: 20,
-            ease: "linear",
-            repeat: Infinity,
-            repeatType: "loop",
+            rotate: {
+              duration: 20,
+              ease: "linear",
+              repeat: Infinity,
+              repeatType: "loop",
+            },
+            opacity: { duration: 1.2, ease: "easeOut" },
           }}
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
+          style={{
+            transformOrigin: `calc(50% + ${layout.second.originX}px) calc(50% + ${layout.second.originY}px)`,
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
         >
-          <div className="rounded-full size-[80%] top-[10%] left-[10%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--second-color),0.3)_0%,rgba(var(--second-color),0)_50%)]" />
+          <div className="rounded-full size-[80%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--second-color),0.3)_0%,rgba(var(--second-color),0)_50%)]" />
         </motion.div>
 
         <motion.div
-          className="absolute inset-0 flex justify-center items-center origin-[calc(50%+400px)]"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 40, ease: "linear", repeat: Infinity }}
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
+          className="absolute inset-0 flex justify-center items-center"
+          initial={{ opacity: 0 }}
+          animate={{ rotate: 360, opacity: 1 }}
+          transition={{
+            rotate: { duration: 40, ease: "linear", repeat: Infinity },
+            opacity: { duration: 1.2, ease: "easeOut" },
+          }}
+          style={{
+            transformOrigin: `calc(50% + ${layout.third.originX}px) calc(50% + ${layout.third.originY}px)`,
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
         >
           <div className="absolute rounded-full size-[80%] bg-[radial-gradient(circle_at_center,rgba(var(--third-color),0.3)_0%,rgba(var(--third-color),0)_50%)] mix-blend-hard-light top-[calc(50%+200px)] left-[calc(50%-500px)]" />
         </motion.div>
 
         <motion.div
-          className="absolute rounded-full size-[80%] top-[10%] left-[10%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--fourth-color),0.3)_0%,rgba(var(--fourth-color),0)_50%)] opacity-70"
-          animate={{ x: [-50, 50, -50] }}
-          transition={{ duration: 40, ease: "easeInOut", repeat: Infinity }}
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
+          className="absolute rounded-full size-[80%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--fourth-color),0.3)_0%,rgba(var(--fourth-color),0)_50%)] opacity-70"
+          initial={{ opacity: 0 }}
+          animate={{ x: [-50, 50, -50], opacity: 0.7 }}
+          transition={{
+            x: { duration: 40, ease: "easeInOut", repeat: Infinity },
+            opacity: { duration: 1.2, ease: "easeOut" },
+          }}
+          style={{
+            top: layout.fourth.top,
+            left: layout.fourth.left,
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
         />
 
         <motion.div
-          className="absolute inset-0 flex justify-center items-center origin-[calc(50%_-_800px)_calc(50%_+_200px)]"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, ease: "linear", repeat: Infinity }}
-          style={{ transform: "translateZ(0)", willChange: "transform" }}
+          className="absolute inset-0 flex justify-center items-center"
+          initial={{ opacity: 0 }}
+          animate={{ rotate: 360, opacity: 1 }}
+          transition={{
+            rotate: { duration: 20, ease: "linear", repeat: Infinity },
+            opacity: { duration: 1.2, ease: "easeOut" },
+          }}
+          style={{
+            transformOrigin: `calc(50% + ${layout.fifth.originX}px) calc(50% + ${layout.fifth.originY}px)`,
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
         >
           <div className="absolute rounded-full size-[160%] mix-blend-hard-light bg-[radial-gradient(circle_at_center,rgba(var(--fifth-color),0.3)_0%,rgba(var(--fifth-color),0)_50%)] top-[calc(50%-80%)] left-[calc(50%-80%)]" />
         </motion.div>

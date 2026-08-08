@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
-import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
+import { createPortal } from "react-dom";
+import noevent from "../assets/illustrations/noevent.svg";
 
 // ── Icons ────────────────────────────────────────────────────────
 const GridIcon = () => (
@@ -177,88 +178,93 @@ const sortEvents = (events, sort) => {
   }
 };
 
-const THEME_PALETTE = {
-  blush: {
-    label: "Blush",
-    bg: "from-pink-100 to-rose-50",
-    badge: "bg-pink-dust/30 text-pink-muted border-pink-dust/40",
-  },
-  sage: {
-    label: "Sage",
-    bg: "from-green-50 to-emerald-50",
-    badge: "bg-sage-light/40 text-sage-muted border-sage-light/50",
-  },
-  gold: {
-    label: "Gold",
-    bg: "from-amber-50 to-yellow-50",
-    badge: "bg-gold-soft/30 text-gold-deep border-gold-soft/40",
-  },
-  default: {
-    label: "Classic",
-    bg: "from-parchment to-cream",
-    badge: "bg-parchment/60 text-text-sm border-border",
-  },
-};
-const themeFor = (t) => THEME_PALETTE[t] || THEME_PALETTE.default;
-
-// ── Sort Dropdown — FIX 2: proper glass blur matching ProfileMenu ──
+// ── Sort Dropdown ──────────────────────────────────────────────
 function SortDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
   const current = SORT_OPTIONS.find((o) => o.value === value);
+
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen((v) => !v);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function handleScroll() {
+      setOpen(false);
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [open]);
+
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={handleToggle}
         className={`flex items-center gap-1.5 py-1.5 px-2.5 rounded-md transition-all duration-150 ${open ? "bg-accent/15 text-accent" : "text-text-sm hover:text-text"}`}
       >
         <SortIcon />
         <span className="hidden sm:inline text-xs">{current?.label}</span>
         <ChevronIcon />
       </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0"
-            style={{ zIndex: 99 }}
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="absolute right-0 top-full mt-2 w-48 p-1 shadow-glass-lg"
-            style={{
-              zIndex: 100,
-              background: "rgba(255,252,248,0.75)",
-              backdropFilter: "blur(20px) saturate(180%)",
-              WebkitBackdropFilter: "blur(20px) saturate(180%)",
-              border: "1px solid rgba(255,255,255,0.5)",
-              borderRadius: "1rem",
-            }}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-colors hover:bg-parchment/60 font-sans ${value === opt.value ? "text-accent font-medium" : "text-text-sm"}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {open &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0"
+              style={{ zIndex: 99 }}
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="fixed w-48 p-1 shadow-glass-lg"
+              style={{
+                top: coords.top,
+                right: coords.right,
+                zIndex: 100,
+                background: "rgba(255,252,248,0.75)",
+                backdropFilter: "blur(20px) saturate(180%)",
+                WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                border: "1px solid rgba(255,255,255,0.5)",
+                borderRadius: "1rem",
+              }}
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-colors hover:bg-parchment/60 font-sans ${value === opt.value ? "text-accent font-medium" : "text-text-sm"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }
 
-// ── Event Card — Grid mode — FIX 1: no hover animation ───────────
+// ── Event Card — Grid mode ───────────────────────────────────────
 function GridCard({ event, isOwner }) {
   const navigate = useNavigate();
-  const theme = themeFor(event.theme);
   return (
-    // FIX 1: removed hover:-translate-y-1 and transition-all duration-300
-    <div className="group relative flex flex-col rounded-2xl overflow-hidden shadow-glass hover:shadow-glass-lg">
+    <div
+      onClick={() => navigate(`/ceremony/${event.id}`)}
+      className="group relative flex flex-col rounded-2xl overflow-hidden shadow-glass hover:shadow-glass-lg cursor-pointer"
+    >
       <div
         className="relative w-full bg-gradient-to-br from-parchment to-cream overflow-hidden"
         style={{ aspectRatio: "16/9" }}
@@ -270,18 +276,9 @@ function GridCard({ event, isOwner }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div
-            className={`w-full h-full bg-gradient-to-br ${theme.bg} flex items-center justify-center`}
-          >
+          <div className="w-full h-full bg-gradient-to-br from-parchment to-cream flex items-center justify-center">
             <ImageIcon />
           </div>
-        )}
-        {event.theme && (
-          <span
-            className={`absolute top-3 left-3 badge border text-[10px] backdrop-blur-sm z-10 ${theme.badge}`}
-          >
-            {themeFor(event.theme).label}
-          </span>
         )}
         {isOwner && (
           <span className="absolute top-3 right-3 badge bg-accent/20 text-accent border border-accent/30 text-[10px] backdrop-blur-sm z-10">
@@ -308,7 +305,10 @@ function GridCard({ event, isOwner }) {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => navigate(`/ceremony/${event.id}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/ceremony/${event.id}`);
+              }}
               className="btn-secondary flex-1 justify-center text-xs py-2 px-3 flex items-center gap-1.5"
             >
               <svg
@@ -326,7 +326,10 @@ function GridCard({ event, isOwner }) {
             </button>
             {isOwner ? (
               <button
-                onClick={() => navigate(`/ceremony/${event.id}/manage`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/ceremony/${event.id}/manage`);
+                }}
                 className="btn-primary flex-1 justify-center text-xs py-2 px-3 flex items-center gap-1.5"
               >
                 <svg
@@ -344,7 +347,10 @@ function GridCard({ event, isOwner }) {
               </button>
             ) : (
               <button
-                onClick={() => navigate(`/ceremony/${event.id}/my-media`)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/ceremony/${event.id}/my-media`);
+                }}
                 className="flex-1 justify-center text-xs py-2 px-3 rounded-xl font-medium transition-all duration-200 hover:opacity-90 active:scale-95 text-white flex items-center gap-1.5"
                 style={{ background: "#8DAA84", border: "none" }}
               >
@@ -370,14 +376,13 @@ function GridCard({ event, isOwner }) {
   );
 }
 
-// ── Event Card — List mode — FIX 1: no hover animation ───────────
+// ── Event Card — List mode ────────────────────────────────────────
 function ListCard({ event, isOwner }) {
   const navigate = useNavigate();
-  const theme = themeFor(event.theme);
   return (
-    // FIX 1: removed hover:-translate-y-0.5 and transition-all duration-300
     <div
-      className="group relative flex items-center rounded-2xl overflow-hidden hover:shadow-glass-lg"
+      onClick={() => navigate(`/ceremony/${event.id}`)}
+      className="group relative flex items-center rounded-2xl overflow-hidden hover:shadow-glass-lg cursor-pointer"
       style={{ height: "72px" }}
     >
       <div className="relative flex-shrink-0 w-24 h-full">
@@ -388,9 +393,7 @@ function ListCard({ event, isOwner }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div
-            className={`w-full h-full bg-gradient-to-br ${theme.bg} flex items-center justify-center`}
-          >
+          <div className="w-full h-full bg-gradient-to-br from-parchment to-cream flex items-center justify-center">
             <svg
               width="20"
               height="20"
@@ -406,13 +409,6 @@ function ListCard({ event, isOwner }) {
             </svg>
           </div>
         )}
-        {event.theme && (
-          <span
-            className={`absolute top-2 left-2 badge border text-[10px] backdrop-blur-sm z-10 ${theme.badge}`}
-          >
-            {themeFor(event.theme).label}
-          </span>
-        )}
       </div>
       <div className="relative flex-1 h-full flex items-center gap-3 px-4 min-w-0">
         {event.cover_url ? (
@@ -426,7 +422,7 @@ function ListCard({ event, isOwner }) {
             }}
           />
         ) : (
-          <div className={`absolute inset-0 bg-gradient-to-br ${theme.bg}`} />
+          <div className="absolute inset-0 bg-gradient-to-br from-parchment to-cream" />
         )}
         <div
           className="absolute inset-0"
@@ -455,7 +451,10 @@ function ListCard({ event, isOwner }) {
         </div>
         <div className="relative z-10 flex gap-2 flex-shrink-0">
           <button
-            onClick={() => navigate(`/ceremony/${event.id}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/ceremony/${event.id}`);
+            }}
             title="View Album"
             className="btn-secondary flex items-center justify-center rounded-full"
             style={{ width: "36px", height: "36px", padding: 0 }}
@@ -474,7 +473,10 @@ function ListCard({ event, isOwner }) {
           </button>
           {isOwner ? (
             <button
-              onClick={() => navigate(`/ceremony/${event.id}/manage`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/ceremony/${event.id}/manage`);
+              }}
               title="Manage"
               className="btn-primary flex items-center justify-center rounded-full"
               style={{ width: "36px", height: "36px", padding: 0 }}
@@ -493,7 +495,10 @@ function ListCard({ event, isOwner }) {
             </button>
           ) : (
             <button
-              onClick={() => navigate(`/ceremony/${event.id}/my-media`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/ceremony/${event.id}/my-media`);
+              }}
               title="My Media"
               className="flex items-center justify-center rounded-full transition-all duration-200 hover:opacity-90 active:scale-95"
               style={{
@@ -546,9 +551,7 @@ function EmptyState({ isOwner }) {
   const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center opacity-60">
-        <ImageIcon />
-      </div>
+      <img src={noevent} alt="" className="w-32 h-32 object-contain" />
       <div>
         <p className="text-text-sm text-sm">
           {isOwner
@@ -626,18 +629,18 @@ export default function Dashboard() {
   const hasAnyEvents = myEvents.length > 0 || joinedEvents.length > 0;
 
   return (
-    <div className="min-h-svh relative">
-      <BubbleBackground
-        interactive
-        colors={{
-          first: "201,168,124",
-          second: "221,168,160",
-          third: "168,191,160",
-          fourth: "212,184,150",
-          fifth: "232,197,192",
-          sixth: "141,170,132",
-        }}
+    <div className="min-h-svh relative bg-ivory">
+      <div
         className="fixed inset-0 z-0"
+        style={{
+          pointerEvents: "none",
+          backgroundImage: `linear-gradient(rgba(210,200,188,0.22) 1px,transparent 1px),linear-gradient(90deg,rgba(210,200,188,0.22) 1px,transparent 1px)`,
+          backgroundSize: "48px 48px",
+          maskImage:
+            "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)",
+        }}
       />
       <div className="relative z-10 flex flex-col min-h-svh">
         <header

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
@@ -15,10 +15,41 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/LandingPage";
 
+import { useEffect } from "react";
+function PageTitle() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const pathname = location.pathname;
+
+    let title = "ShareAlbum";
+
+    if (pathname === "/") title = "ShareAlbum";
+    else if (pathname === "/login") title = "Log In • ShareAlbum";
+    else if (pathname === "/signup") title = "Sign Up • ShareAlbum";
+    else if (pathname === "/dashboard") title = "Dashboard • ShareAlbum";
+    else if (pathname === "/profile") title = "Profile • ShareAlbum";
+    else if (pathname === "/ceremony/create")
+      title = "Create Event • ShareAlbum";
+    else if (pathname === "/reset-password")
+      title = "Reset Password • ShareAlbum";
+    else if (pathname.includes("/upload")) title = "Add Media • ShareAlbum";
+    else if (pathname.includes("/manage")) title = "Manage Event • ShareAlbum";
+    else if (pathname.includes("/my-media")) title = "My Media • ShareAlbum";
+    else if (pathname.startsWith("/ceremony/")) title = "Gallery • ShareAlbum";
+    else title = "Page Not Found • ShareAlbum";
+
+    document.title = title;
+  }, [location]);
+
+  return null;
+}
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <PageTitle />
+
         <Routes>
           {/* Public */}
           <Route path="/" element={<Landing />} />

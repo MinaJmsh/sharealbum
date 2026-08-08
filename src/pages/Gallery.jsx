@@ -2,6 +2,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import Loader from "../components/common/Loader";
+import nophoto from "../assets/illustrations/nophoto.svg";
+import eventnotfound from "../assets/illustrations/eventnotfound.svg";
+import JSZip from "jszip";
+import { QRCodeSVG } from "qrcode.react";
 
 // ── Avatar ─────────────────────────────────────────────────────
 function Avatar({ name, size = 28 }) {
@@ -1031,11 +1035,268 @@ function SmartFAB({ session, isOwner, onClick }) {
   );
 }
 
+const DotsIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5" r="2.4" />
+    <circle cx="12" cy="12" r="2.4" />
+    <circle cx="12" cy="19" r="2.4" />
+  </svg>
+);
+
+/* ─── Gallery Options Menu (top-right, 3-dot) ───────────────────── */
+function GalleryMenu({
+  anchorRef,
+  onClose,
+  onDownload,
+  onShowQR,
+  downloading,
+}) {
+  const rect = anchorRef?.current?.getBoundingClientRect();
+
+  const menuStyle = rect
+    ? {
+        position: "fixed",
+        top: rect.bottom + 8,
+        left: rect.right - 256, // menu width
+        width: 256,
+      }
+    : {
+        position: "fixed",
+        top: 64,
+        right: 16,
+        width: 256,
+      };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      onClose();
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div
+        style={menuStyle}
+        className="glass-sm p-1 shadow-glass-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="py-1">
+          <button
+            onClick={onDownload}
+            disabled={downloading}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-parchment/60 rounded-lg transition-colors font-sans disabled:opacity-50"
+          >
+            {downloading ? (
+              <svg
+                className="w-4 h-4 animate-spin text-text-sm"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-4 h-4 text-text-sm"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                />
+              </svg>
+            )}
+            {downloading ? "Preparing zip…" : "Download as ZIP"}
+          </button>
+          <button
+            onClick={onShowQR}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text hover:bg-parchment/60 rounded-lg transition-colors font-sans"
+          >
+            <svg
+              className="w-4 h-4 text-text-sm"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 18.75h.75v.75h-.75v-.75zM18.75 13.5h.75v.75h-.75v-.75zM18.75 18.75h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
+              />
+            </svg>
+            Get QR code
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── QR Sheet (same as My Event page) ──────────────────────────── */
+function QRSheet({ ceremony, onClose }) {
+  const qrRef = useRef(null);
+  const qrUrl = ceremony.qr_code;
+
+  function downloadQR() {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const size = 400;
+    const data = new XMLSerializer().serializeToString(svg);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `${ceremony.name.replace(/\s+/g, "-")}-qr.png`;
+      a.click();
+    };
+    img.src =
+      "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(data)));
+  }
+
+  async function shareQR() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: ceremony.name, url: qrUrl });
+        return;
+      } catch {}
+    }
+    await navigator.clipboard.writeText(qrUrl);
+    alert("Link copied to clipboard!");
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-text/20 backdrop-blur-md"
+        onClick={onClose}
+      />
+      <div className="relative glass-lg w-full max-w-sm shadow-glass-lg overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-pink-dust via-accent to-sage-light" />
+        <div className="px-6 pt-5 pb-7 flex flex-col items-center gap-4">
+          <div className="flex items-center justify-between w-full">
+            <h3 className="font-display text-lg font-medium text-text-h">
+              Event QR code
+            </h3>
+            <button onClick={onClose} className="btn-ghost px-2 py-1.5">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div ref={qrRef} className="glass p-4 rounded-2xl shadow-soft">
+            <QRCodeSVG
+              value={qrUrl}
+              size={180}
+              bgColor="transparent"
+              fgColor="#3d2e1e"
+              level="M"
+            />
+          </div>
+          <p className="text-xs text-text-sm font-sans text-center break-all opacity-70">
+            {qrUrl}
+          </p>
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={downloadQR}
+              className="btn-secondary flex-1 justify-center text-sm gap-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                />
+              </svg>
+              Download
+            </button>
+            <button
+              onClick={shareQR}
+              className="btn-secondary flex-1 justify-center text-sm gap-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"
+                />
+              </svg>
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── helpers ────────────────────────────────────────────────────── */
+function extFromUrl(url) {
+  const clean = url.split("?")[0];
+  const m = clean.match(/\.([a-zA-Z0-9]+)$/);
+  return m ? m[1] : "jpg";
+}
+
 // ── Main Gallery ───────────────────────────────────────────────
 export default function Gallery() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const menuButtonRef = useRef(null);
 
   const [ceremony, setCeremony] = useState(null);
   const [media, setMedia] = useState([]);
@@ -1044,6 +1305,9 @@ export default function Gallery() {
   const [session, setSession] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [lightbox, setLightbox] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     supabase.auth
@@ -1081,6 +1345,18 @@ export default function Gallery() {
     }
   }, [session, ceremony]);
 
+  useEffect(() => {
+    if (ceremony?.name) {
+      document.title = `${ceremony.name} • ShareAlbum`;
+    } else {
+      document.title = "Gallery • ShareAlbum";
+    }
+
+    return () => {
+      document.title = "ShareAlbum";
+    };
+  }, [ceremony]);
+
   const handleFAB = useCallback(async () => {
     if (!session) {
       navigate("/login", { state: { from: location.pathname } });
@@ -1098,6 +1374,56 @@ export default function Gallery() {
   const nextItem = () => setLightbox((i) => (i < media.length - 1 ? i + 1 : i));
   const jumpToItem = (i) => setLightbox(i);
 
+  async function handleDownloadZip() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const zip = new JSZip();
+      const safeName = (ceremony?.name || "event").replace(/[^\w\-]+/g, "_");
+      const folder = zip.folder(safeName);
+
+      if (ceremony?.cover_url) {
+        const res = await fetch(ceremony.cover_url);
+        const blob = await res.blob();
+        folder.file(`cover.${extFromUrl(ceremony.cover_url)}`, blob);
+      }
+
+      let photoCount = 0;
+      let videoCount = 0;
+      for (const item of media) {
+        const res = await fetch(item.file_url);
+        const blob = await res.blob();
+        const ext = extFromUrl(item.file_url);
+        if (item.file_type === "video") {
+          videoCount += 1;
+          folder.file(
+            `video-${String(videoCount).padStart(3, "0")}.${ext}`,
+            blob,
+          );
+        } else {
+          photoCount += 1;
+          folder.file(
+            `photo-${String(photoCount).padStart(3, "0")}.${ext}`,
+            blob,
+          );
+        }
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeName}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Failed to download album. Please try again.");
+    } finally {
+      setDownloading(false);
+      setMenuOpen(false);
+    }
+  }
+
   const images = media.filter((m) => m.file_type !== "video");
   const videos = media.filter((m) => m.file_type === "video");
 
@@ -1105,23 +1431,11 @@ export default function Gallery() {
     return (
       <div className="min-h-svh flex items-center justify-center bg-ivory px-6">
         <div className="glass max-w-sm w-full px-8 py-10 text-center space-y-4">
-          <div
-            className="w-12 h-12 rounded-full mx-auto flex items-center justify-center"
-            style={{ background: "rgba(232,197,192,0.4)" }}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#C98F87"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </div>
+          <img
+            src={eventnotfound}
+            alt=""
+            className="w-28 h-28 object-contain mx-auto"
+          />
           <h2 className="font-display text-2xl font-light text-text-h">
             {error}
           </h2>
@@ -1183,6 +1497,21 @@ export default function Gallery() {
           </>
         )}
 
+        {!loading && ceremony && (
+          <button
+            ref={menuButtonRef}
+            onClick={() => setMenuOpen(true)}
+            className="absolute top-5 right-5 z-10 flex items-center justify-center transition-opacity hover:opacity-80"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: ceremony?.cover_url ? "#fff" : "#5C5148",
+            }}
+          >
+            <DotsIcon />
+          </button>
+        )}
+
         <div className="absolute bottom-0 left-0 z-10 pb-10 px-6 sm:px-8 max-w-[85vw]">
           {loading ? (
             <>
@@ -1225,23 +1554,7 @@ export default function Gallery() {
           <SkeletonMasonry count={12} />
         ) : media.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(212,184,150,0.2)" }}
-            >
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#C9A87C"
-                strokeWidth="1.5"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="3" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="M21 15l-5-5L5 21" />
-              </svg>
-            </div>
+            <img src={nophoto} alt="" className="w-32 h-32 opacity-90" />
             <div className="text-center space-y-1">
               <p className="font-display text-2xl font-light text-text-h">
                 No photos yet
@@ -1260,6 +1573,25 @@ export default function Gallery() {
 
       {/* Smart FAB */}
       <SmartFAB session={session} isOwner={isOwner} onClick={handleFAB} />
+
+      {/* Gallery options menu */}
+      {menuOpen && (
+        <GalleryMenu
+          anchorRef={menuButtonRef}
+          onClose={() => setMenuOpen(false)}
+          onDownload={handleDownloadZip}
+          onShowQR={() => {
+            setMenuOpen(false);
+            setShowQR(true);
+          }}
+          downloading={downloading}
+        />
+      )}
+
+      {/* QR code sheet */}
+      {showQR && ceremony && (
+        <QRSheet ceremony={ceremony} onClose={() => setShowQR(false)} />
+      )}
 
       {/* Lightbox */}
       {lightbox !== null && media[lightbox] && (
