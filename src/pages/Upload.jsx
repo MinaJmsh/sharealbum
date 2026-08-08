@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
+import { notify } from "../lib/toast";
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 function formatSize(bytes) {
@@ -331,7 +332,6 @@ export default function Upload() {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadItems, setUploadItems] = useState([]);
-  const [globalError, setGlobalError] = useState(null);
   const [processing, setProcessing] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -343,14 +343,16 @@ export default function Upload() {
 
   async function processFiles(rawFiles) {
     setProcessing(true);
-    setGlobalError(null);
     const oversized = [];
+    const unsupported = [];
     const valid = [];
 
     for (const f of rawFiles) {
       // Accept anything image/* or video/*
-      if (!f.type.startsWith("image/") && !f.type.startsWith("video/"))
+      if (!f.type.startsWith("image/") && !f.type.startsWith("video/")) {
+        unsupported.push(f.name);
         continue;
+      }
       if (f.size > MAX_SIZE) {
         oversized.push(f.name);
         continue;
@@ -365,16 +367,33 @@ export default function Upload() {
       });
     }
 
+    if (unsupported.length > 0) {
+      notify.warning(
+        "Unsupported files skipped",
+        `${unsupported.length} file${unsupported.length > 1 ? "s" : ""} weren't photos or videos.`,
+      );
+    }
     if (oversized.length > 0) {
-      setGlobalError(
+      notify.warning(
+        "Files too large",
         `${oversized.length} file${oversized.length > 1 ? "s" : ""} exceed 10 MB and were skipped.`,
       );
     }
 
+    let addedCount = 0;
     setFiles((prev) => {
       const existingNames = new Set(prev.map((p) => p.file.name));
-      return [...prev, ...valid.filter((v) => !existingNames.has(v.file.name))];
+      const unique = valid.filter((v) => !existingNames.has(v.file.name));
+      addedCount = unique.length;
+      return [...prev, ...unique];
     });
+
+    if (addedCount > 0) {
+      notify.success(
+        "Files added",
+        `${addedCount} file${addedCount !== 1 ? "s" : ""} ready to upload.`,
+      );
+    }
     setProcessing(false);
   }
 
@@ -408,7 +427,6 @@ export default function Upload() {
 
   async function startUpload() {
     if (!selected.length) return;
-    setGlobalError(null);
     setUploading(true);
 
     const items = selected.map((f) => ({
@@ -421,6 +439,9 @@ export default function Upload() {
       error: null,
     }));
     setUploadItems(items);
+
+    let succeeded = 0;
+    let failed = 0;
 
     for (const item of items) {
       setUploadItems((prev) =>
@@ -465,6 +486,7 @@ export default function Upload() {
             p.id === item.id ? { ...p, status: "done", progress: 100 } : p,
           ),
         );
+        succeeded++;
       } catch (err) {
         setUploadItems((prev) =>
           prev.map((p) =>
@@ -477,7 +499,25 @@ export default function Upload() {
               : p,
           ),
         );
+        failed++;
       }
+    }
+
+    if (failed === 0) {
+      notify.success(
+        "Upload complete",
+        `${succeeded} file${succeeded !== 1 ? "s" : ""} uploaded successfully.`,
+      );
+    } else if (succeeded === 0) {
+      notify.error(
+        "Upload failed",
+        `All ${failed} file${failed !== 1 ? "s" : ""} failed to upload.`,
+      );
+    } else {
+      notify.warning(
+        "Partially uploaded",
+        `${succeeded} succeeded, ${failed} failed.`,
+      );
     }
   }
 
@@ -524,31 +564,6 @@ export default function Upload() {
       </header>
 
       <main className="page pt-6 pb-28">
-        {globalError && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50/60 border border-amber-200/50 text-sm text-amber-700 font-sans flex items-center gap-2">
-            <svg
-              className="w-4 h-4 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-              />
-            </svg>
-            {globalError}
-            <button
-              onClick={() => setGlobalError(null)}
-              className="ml-auto text-amber-500 hover:text-amber-700"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         {/* Drop zone */}
         <div
           className={dropZoneClass}

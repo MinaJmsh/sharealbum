@@ -14,6 +14,8 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/LandingPage";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import { useEffect } from "react";
 function PageTitle() {
@@ -49,7 +51,6 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <PageTitle />
-
         <Routes>
           {/* Public */}
           <Route path="/" element={<Landing />} />
@@ -57,7 +58,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<NotFound />} />
-
           {/* Protected */}
           <Route
             path="/ceremony/:id/my-media"
@@ -107,8 +107,20 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Routes>
+          <Route path="/reset-password" element={<ResetPassword />} />{" "}
+        </Routes>{" "}
+        <ToastContainer
+          position="bottom-right"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          pauseOnHover
+          theme="light"
+          toastClassName="!p-0 !min-h-0 !shadow-none !bg-transparent"
+          bodyClassName="!p-0 !m-0"
+          style={{ "--toastify-color-progress-light": "#C9A87C" }}
+        />
       </BrowserRouter>
     </AuthProvider>
   );

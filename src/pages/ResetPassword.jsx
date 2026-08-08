@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { notify } from "../lib/toast";
 
 const LogoIcon = () => (
   <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
@@ -78,7 +79,6 @@ export default function ResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
   const [invalidLink, setInvalidLink] = useState(false);
 
@@ -114,7 +114,13 @@ export default function ResetPassword() {
         if (!prev) {
           // only mark invalid if session never became ready
           supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) setInvalidLink(true);
+            if (!session) {
+              setInvalidLink(true);
+              notify.error(
+                "Link expired",
+                "This password reset link is invalid or has expired.",
+              );
+            }
           });
         }
         return prev;
@@ -129,17 +135,42 @@ export default function ResetPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
-    if (password.length < 6)
-      return setError("Password must be at least 6 characters.");
-    if (password !== confirm) return setError("Passwords don't match.");
+    if (password.length < 6) {
+      notify.warning(
+        "Password too short",
+        "Password must be at least 6 characters.",
+      );
+      return;
+    }
+    if (password !== confirm) {
+      notify.warning(
+        "Passwords don't match",
+        "Please make sure both password fields are identical.",
+      );
+      return;
+    }
 
     setLoading(true);
-    const { error: err } = await supabase.auth.updateUser({ password });
-    setLoading(false);
+    try {
+      const { error: err } = await supabase.auth.updateUser({ password });
 
-    if (err) setError(err.message);
-    else setDone(true);
+      if (err) {
+        notify.error("Couldn't update password", err.message);
+      } else {
+        setDone(true);
+        notify.success(
+          "Password updated",
+          "You can now sign in with your new password.",
+        );
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   // ── Invalid / expired link ────────────────────────────────────
@@ -327,12 +358,6 @@ export default function ResetPassword() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="glass-sm px-4 py-3 border-pink-dust/60 text-pink-muted text-sm font-sans animate-fade-in">
-                    {error}
-                  </div>
-                )}
-
                 {/* New password */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium font-sans text-text-sm uppercase tracking-wider">

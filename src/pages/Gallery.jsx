@@ -6,6 +6,7 @@ import nophoto from "../assets/illustrations/nophoto.svg";
 import eventnotfound from "../assets/illustrations/eventnotfound.svg";
 import JSZip from "jszip";
 import { QRCodeSVG } from "qrcode.react";
+import { notify } from "../lib/toast";
 
 // ── Avatar ─────────────────────────────────────────────────────
 function Avatar({ name, size = 28 }) {
@@ -375,7 +376,7 @@ function Lightbox({
   const [uploader, setUploader] = useState(null);
   const [uploaderFetched, setUploaderFetched] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [shareToast, setShareToast] = useState(false);
+  // const [shareToast, setShareToast] = useState(false);
   // FIX: chrome visibility — show on any interaction, auto-hide after 3s idle
   const [chromeVisible, setChromeVisible] = useState(true);
   const idleTimer = useRef(null);
@@ -549,8 +550,7 @@ function Lightbox({
       } catch {}
     } else {
       await navigator.clipboard.writeText(item.file_url);
-      setShareToast(true);
-      setTimeout(() => setShareToast(false), 2200);
+      notify.success("Link copied", "Ready to share.");
     }
   }
 
@@ -956,7 +956,7 @@ function Lightbox({
       </div>
 
       {/* Share toast */}
-      {shareToast && (
+      {/* {shareToast && (
         <div
           className="fixed bottom-24 left-1/2 z-50 px-5 py-2.5 rounded-xl text-sm font-sans"
           style={{
@@ -973,7 +973,7 @@ function Lightbox({
         >
           Link copied to clipboard
         </div>
-      )}
+      )} */}
     </div>
   );
 }
@@ -1194,7 +1194,7 @@ function QRSheet({ ceremony, onClose }) {
       } catch {}
     }
     await navigator.clipboard.writeText(qrUrl);
-    alert("Link copied to clipboard!");
+    notify.success("Link copied", "QR link copied to clipboard.");
   }
 
   return (
@@ -1416,8 +1416,12 @@ export default function Gallery() {
       a.download = `${safeName}.zip`;
       a.click();
       URL.revokeObjectURL(url);
+      notify.success("Download ready", `${safeName}.zip has been saved.`);
     } catch (e) {
-      alert("Failed to download album. Please try again.");
+      notify.error(
+        "Download failed",
+        "Failed to download album. Please try again.",
+      );
     } finally {
       setDownloading(false);
       setMenuOpen(false);

@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import ProfileMenu from "../components/common/ProfileMenu";
 import nomedia from "../assets/illustrations/nomedia.svg";
+import { notify } from "../lib/toast";
 
 function getStoragePath(url) {
   const marker = "/object/public/media/";
@@ -198,7 +199,6 @@ export default function MyMedia() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [toDelete, setToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const user = session?.user;
   const initials = user?.user_metadata?.display_name
@@ -207,7 +207,6 @@ export default function MyMedia() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const [{ data: ceremonyData }, { data: mediaData, error: mediaErr }] =
         await Promise.all([
@@ -227,7 +226,10 @@ export default function MyMedia() {
       setCeremony(ceremonyData);
       setMedia(mediaData ?? []);
     } catch {
-      setError("Failed to load your media. Please try again.");
+      notify.error(
+        "Couldn't load media",
+        "Failed to load your media. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -250,8 +252,9 @@ export default function MyMedia() {
       if (dbErr) throw dbErr;
       setMedia((prev) => prev.filter((m) => m.id !== toDelete.id));
       setToDelete(null);
+      notify.success("Media deleted", "The file has been removed.");
     } catch {
-      setError("Failed to delete. Please try again.");
+      notify.error("Couldn't delete", "Failed to delete. Please try again.");
       setToDelete(null);
     } finally {
       setDeleteLoading(false);
@@ -313,31 +316,6 @@ export default function MyMedia() {
       )}
 
       <main className="page pt-6 pb-28">
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
-            <svg
-              className="w-4 h-4 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-              />
-            </svg>
-            {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-rose-400 hover:text-rose-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <SkeletonSquareGrid columns={columns} />
         ) : media.length === 0 ? (

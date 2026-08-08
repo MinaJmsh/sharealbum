@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
+import { notify } from "../lib/toast";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -11,7 +12,6 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false); // confirmation email sent
 
@@ -37,33 +37,48 @@ export default function Signup() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
 
     if (password !== confirm) {
-      setError("Passwords don't match.");
+      notify.warning(
+        "Passwords don't match",
+        "Please make sure both password fields are identical.",
+      );
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      notify.warning(
+        "Password too short",
+        "Password must be at least 8 characters.",
+      );
       return;
     }
 
     setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: name.trim() },
+        },
+      });
 
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: name.trim() },
-      },
-    });
-
-    setLoading(false);
-
-    if (authError) {
-      setError(authError.message);
-    } else {
-      setDone(true);
+      if (authError) {
+        notify.error("Couldn't create account", authError.message);
+      } else {
+        setDone(true);
+        notify.success(
+          "Account created",
+          "Check your email to confirm your account.",
+        );
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -188,13 +203,6 @@ export default function Signup() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Error */}
-            {error && (
-              <div className="glass-sm px-4 py-3 border-pink-dust/60 text-pink-muted text-sm font-sans animate-fade-in">
-                {error}
-              </div>
-            )}
-
             {/* Display name */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium font-sans text-text-sm uppercase tracking-wider">

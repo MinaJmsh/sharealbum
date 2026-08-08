@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
+import { notify } from "../lib/toast";
 
 // ── Icons ─────────────────────────────────────────────────────────
 const LogoIcon = () => (
@@ -101,22 +102,6 @@ const LogOutIcon = () => (
   </svg>
 );
 
-// ── Toast ─────────────────────────────────────────────────────────
-function Toast({ message, type, onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 3000);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return (
-    <div
-      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-glass-lg border backdrop-blur-md text-sm font-medium transition-all ${type === "error" ? "bg-red-50/90 border-red-200 text-red-700" : "bg-white/90 border-border text-text-h"}`}
-    >
-      {type !== "error" && <CheckIcon />}
-      {message}
-    </div>
-  );
-}
-
 // ── Section card ──────────────────────────────────────────────────
 function Card({ title, children }) {
   return (
@@ -143,8 +128,6 @@ export default function Profile() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
 
-  const [toast, setToast] = useState(null);
-
   const email = session?.user?.email || "";
   const initials = email ? email.slice(0, 2).toUpperCase() : "ME";
 
@@ -156,8 +139,6 @@ export default function Profile() {
     setDisplayName(name);
   }, [session]);
 
-  const showToast = (message, type = "success") => setToast({ message, type });
-
   const handleSaveName = async () => {
     if (!displayName.trim()) return;
     setSavingName(true);
@@ -165,31 +146,55 @@ export default function Profile() {
       data: { full_name: displayName.trim(), display_name: displayName.trim() },
     });
     setSavingName(false);
-    if (error) showToast(error.message, "error");
-    else showToast("Display name updated!");
+    if (error) notify.error("Couldn't save name", error.message);
+    else notify.success("Display name updated");
   };
 
   const handleChangePassword = async () => {
-    if (!newPw || !confirmPw)
-      return showToast("Please fill in all password fields.", "error");
-    if (newPw !== confirmPw)
-      return showToast("New passwords don't match.", "error");
-    if (newPw.length < 6)
-      return showToast("Password must be at least 6 characters.", "error");
+    if (!newPw || !confirmPw) {
+      notify.warning("Missing fields", "Please fill in all password fields.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      notify.warning(
+        "Passwords don't match",
+        "Please make sure both password fields are identical.",
+      );
+      return;
+    }
+    if (newPw.length < 6) {
+      notify.warning(
+        "Password too short",
+        "Password must be at least 6 characters.",
+      );
+      return;
+    }
     setSavingPw(true);
     const { error } = await supabase.auth.updateUser({ password: newPw });
     setSavingPw(false);
-    if (error) showToast(error.message, "error");
-    else {
-      showToast("Password updated successfully!");
+    if (error) {
+      notify.error("Couldn't update password", error.message);
+    } else {
+      notify.success("Password updated", "Your password has been changed.");
       setNewPw("");
       setConfirmPw("");
     }
   };
-
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        notify.error("Couldn't sign out", error.message);
+        return;
+      }
+      notify.info("Signed out", "You've been logged out.");
+      navigate("/login");
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    }
   };
 
   const pwStrength = (pw) => {
@@ -359,11 +364,6 @@ export default function Profile() {
                       <EyeIcon open={showConfirm} />
                     </button>
                   </div>
-                  {confirmPw && confirmPw !== newPw && (
-                    <p className="text-red-400 text-xs mt-1">
-                      Passwords don't match.
-                    </p>
-                  )}
                 </div>
                 <button
                   onClick={handleChangePassword}
@@ -390,13 +390,6 @@ export default function Profile() {
             </div>
           </div>
         </main>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onDone={() => setToast(null)}
-          />
-        )}
       </div>
     </div>
   );

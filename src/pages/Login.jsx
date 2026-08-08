@@ -1,24 +1,34 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { notify } from "../lib/toast";
 
 // ── Forgot Password view ──────────────────────────────────────────
 function ForgotPassword({ onBack }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
     setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    if (err) setError(err.message);
-    else setSent(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (err) {
+        notify.error("Couldn't send reset link", err.message);
+      } else {
+        setSent(true);
+        notify.info("Check your inbox", `Reset link sent to ${email}.`);
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -78,11 +88,11 @@ function ForgotPassword({ onBack }) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
+          {/* {error && (
             <div className="glass-sm px-4 py-3 border-pink-dust/60 text-pink-muted text-sm font-sans">
               {error}
             </div>
-          )}
+          )} */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium font-sans text-text-sm uppercase tracking-wider">
               Email
@@ -141,7 +151,6 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -150,15 +159,26 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError("");
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (authError) setError(authError.message);
-    else navigate(from, { replace: true });
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (authError) {
+        notify.error("Sign in failed", authError.message);
+      } else {
+        notify.success("Welcome back", "You're signed in.");
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -235,11 +255,11 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
+              {/* {error && (
                 <div className="glass-sm px-4 py-3 border-pink-dust/60 text-pink-muted text-sm font-sans animate-fade-in">
                   {error}
                 </div>
-              )}
+              )} */}
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium font-sans text-text-sm uppercase tracking-wider">

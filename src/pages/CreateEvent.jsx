@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import Loader from "../components/common/Loader";
+import { notify } from "../lib/toast";
 
 const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin;
 
@@ -333,7 +334,7 @@ export default function CreateEvent() {
   const [creating, setCreating] = useState(false);
   const [status, setStatus] = useState("");
   const [created, setCreated] = useState(null);
-  const [error, setError] = useState(null);
+  // const [error, setError] = useState(null);
   const [showDiscard, setShowDiscard] = useState(false);
   const [pendingNav, setPendingNav] = useState(null);
 
@@ -365,10 +366,24 @@ export default function CreateEvent() {
     setShowDiscard(false);
     navigate(pendingNav ?? "/dashboard");
   }
-
   async function handleCoverChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      notify.warning("Unsupported file", "Cover photo must be an image.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      notify.warning(
+        "File too large",
+        `"${file.name}" is over the 10MB limit.`,
+      );
+      e.target.value = "";
+      return;
+    }
+
     setCoverFile(file);
     const r = new FileReader();
     r.onload = (ev) => setCoverPreview(ev.target.result);
@@ -380,25 +395,65 @@ export default function CreateEvent() {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     const processed = [];
+    let skippedType = 0;
+    let skippedSize = 0;
+
     for (const f of files) {
-      if (!f.type.startsWith("image/") && !f.type.startsWith("video/"))
+      if (!f.type.startsWith("image/") && !f.type.startsWith("video/")) {
+        skippedType++;
         continue;
-      if (f.size > 10 * 1024 * 1024) continue;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        skippedSize++;
+        continue;
+      }
       const { preview, isVideo } = await getFilePreview(f);
       processed.push({ id: crypto.randomUUID(), file: f, preview, isVideo });
     }
+
+    let addedCount = 0;
+    let duplicateCount = 0;
     setMediaFiles((prev) => {
       const names = new Set(prev.map((p) => p.file.name));
-      return [...prev, ...processed.filter((p) => !names.has(p.file.name))];
+      const unique = processed.filter((p) => !names.has(p.file.name));
+      addedCount = unique.length;
+      duplicateCount = processed.length - unique.length;
+      return [...prev, ...unique];
     });
-  }
 
+    if (skippedType > 0) {
+      notify.warning(
+        "Unsupported files skipped",
+        `${skippedType} file${skippedType !== 1 ? "s" : ""} weren't photos or videos.`,
+      );
+    }
+    if (skippedSize > 0) {
+      notify.warning(
+        "Files too large",
+        `${skippedSize} file${skippedSize !== 1 ? "s" : ""} exceeded the 10MB limit.`,
+      );
+    }
+    if (duplicateCount > 0) {
+      notify.info(
+        "Duplicates ignored",
+        `${duplicateCount} file${duplicateCount !== 1 ? "s" : ""} already added.`,
+      );
+    }
+    if (addedCount > 0) {
+      notify.success(
+        "Media added",
+        `${addedCount} file${addedCount !== 1 ? "s" : ""} ready to upload.`,
+      );
+    }
+  }
   async function handleCreate() {
     if (!name.trim()) {
-      setError("Please enter an event name.");
+      notify.warning(
+        "Name required",
+        "Please enter an event name before creating.",
+      );
       return;
     }
-    setError(null);
     setCreating(true);
     try {
       let coverUrl = null;
@@ -452,8 +507,12 @@ export default function CreateEvent() {
       }
       setStatus("Done!");
       setCreated({ ...ceremony, qr_code: qrUrl });
+      notify.success("Event created", `"${ceremony.name}" is ready to share.`);
     } catch (e) {
-      setError(e?.message ?? "Something went wrong. Please try again.");
+      notify.error(
+        "Couldn't create event",
+        e?.message ?? "Something went wrong. Please try again.",
+      );
     } finally {
       setCreating(false);
     }
@@ -498,7 +557,7 @@ export default function CreateEvent() {
       </header>
 
       <main className="page pt-6 pb-28 max-w-2xl">
-        {error && (
+        {/* {error && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
             <svg
               className="w-4 h-4 flex-shrink-0"
@@ -518,7 +577,7 @@ export default function CreateEvent() {
               ×
             </button>
           </div>
-        )}
+        )} */}
 
         <div className="flex flex-col gap-7">
           {/* Name */}

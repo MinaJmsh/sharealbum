@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../supabaseClient";
+import { notify } from "../../lib/toast";
 
 /* ─── Profile Menu ────────────────────────────────────────────────── */
 export default function ProfileMenu({ user, onClose }) {
@@ -12,8 +13,20 @@ export default function ProfileMenu({ user, onClose }) {
   const email = user?.email ?? "";
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        notify.error("Couldn't sign out", error.message);
+        return;
+      }
+      notify.info("Signed out", "You've been logged out.");
+      navigate("/login");
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    }
   }
 
   return (
