@@ -245,6 +245,26 @@ export default function Login() {
           <ForgotPassword onBack={() => setShowForgot(false)} />
         ) : (
           <div className="w-full max-w-sm animate-fade-up">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-1.5 text-sm text-text-sm hover:text-text transition-colors mb-8 -ml-0.5"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
+              </svg>
+              Back to home
+            </button>
+
             <div className="mb-8">
               <h1 className="font-display text-4xl font-light text-text-h mb-2 tracking-tight">
                 Welcome back

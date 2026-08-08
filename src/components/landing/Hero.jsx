@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import PhoneMockup from "./PhoneMockup";
 import { WordRotate } from "../ui/word-rotate";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { useAuth } from "../../context/AuthContext";
 import {
   SparkleIcon,
   CameraIcon,
@@ -23,8 +25,11 @@ function isMobileDevice() {
 
 export default function Hero() {
   const [scanHover, setScanHover] = useState(false);
+  const [createHover, setCreateHover] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const cameraInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -42,6 +47,10 @@ export default function Hero() {
     if (!file) return;
     // TODO: hand off to QR decode / gallery-open flow once captured.
     e.target.value = "";
+  };
+
+  const handleCreateEventClick = () => {
+    navigate(isLoggedIn ? "/ceremony/create" : "/login");
   };
 
   const scanButton = (
@@ -256,8 +265,10 @@ export default function Hero() {
                 aria-hidden="true"
               />
 
-              <a
-                href="#auth"
+              <button
+                onClick={handleCreateEventClick}
+                onMouseEnter={() => setCreateHover(true)}
+                onMouseLeave={() => setCreateHover(false)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -271,24 +282,16 @@ export default function Hero() {
                   fontSize: "0.92rem",
                   fontWeight: 500,
                   border: "1px solid rgba(210,200,188,0.7)",
-                  boxShadow: "0 4px 16px rgba(90,70,50,0.06)",
+                  boxShadow: createHover
+                    ? "0 8px 24px rgba(90,70,50,0.1)"
+                    : "0 4px 16px rgba(90,70,50,0.06)",
                   cursor: "pointer",
-                  textDecoration: "none",
+                  transform: createHover ? "translateY(-2px)" : "translateY(0)",
                   transition: `transform 0.2s ${EASE_OUT}, box-shadow 0.2s ${EASE_OUT}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 8px 24px rgba(90,70,50,0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 16px rgba(90,70,50,0.06)";
                 }}
               >
                 Create an event <ArrowRight />
-              </a>
+              </button>
             </div>
 
             <div

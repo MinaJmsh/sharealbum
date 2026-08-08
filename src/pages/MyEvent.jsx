@@ -1008,7 +1008,7 @@ export default function MyEvent() {
       <header className="sticky top-0 z-40 glass-sm border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => tryNavigate(`/ceremony/${ceremonyId}`)}
+            onClick={() => tryNavigate(-1)}
             className="btn-ghost px-2 py-1.5"
           >
             <svg

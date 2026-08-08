@@ -20,7 +20,7 @@ export default function ProfileMenu({ user, onClose }) {
         return;
       }
       notify.info("Signed out", "You've been logged out.");
-      navigate("/login");
+      navigate("/");
     } catch (err) {
       notify.error(
         "Connection problem",

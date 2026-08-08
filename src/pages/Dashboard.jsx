@@ -652,7 +652,7 @@ export default function Dashboard() {
         >
           <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
             <Link
-              to="/dashboard"
+              to="/"
               className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
             >
               <LogoIcon />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Reveal, EASE_OUT } from "./LandingPageShared";
 import f1 from "../../assets/illustrations/f1.svg";
 import f2 from "../../assets/illustrations/f2.svg";
@@ -9,16 +10,24 @@ const ILLUSTRATIONS = { f1, f2, f3, f4 };
 
 function FeatureCard({ feature: f }) {
   const [hov, setHov] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      onClick={() => navigate(`/features/${f.slug}`)}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(`/features/${f.slug}`);
+      }}
       style={{
         position: "relative",
         height: "100%",
         minHeight: "260px",
         borderRadius: "22px",
+        cursor: "pointer",
         background: hov ? "rgba(255,252,248,0.78)" : "rgba(255,252,248,0.62)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
@@ -35,6 +44,7 @@ function FeatureCard({ feature: f }) {
         flexDirection: "column",
       }}
     >
+      {/* ambient glow, brightens on hover */}
       <div
         aria-hidden="true"
         style={{
@@ -43,11 +53,15 @@ function FeatureCard({ feature: f }) {
           right: "-10%",
           width: "70%",
           height: "140%",
-          background: `radial-gradient(ellipse at 70% 50%, ${f.accent}22 0%, transparent 68%)`,
+          background: `radial-gradient(ellipse at 70% 50%, ${f.accent}${
+            hov ? "33" : "22"
+          } 0%, transparent 68%)`,
+          transition: `background 0.4s ${EASE_OUT}`,
           pointerEvents: "none",
         }}
       />
 
+      {/* illustration layer, scales + drifts on hover (magicui-style background motion) */}
       <div
         aria-hidden="true"
         style={{
@@ -61,8 +75,6 @@ function FeatureCard({ feature: f }) {
           WebkitMaskImage:
             "linear-gradient(105deg, transparent 0%, transparent 6%, black 50%, black 100%)",
           pointerEvents: "none",
-          transform: hov ? "scale(1.04)" : "scale(1)",
-          transition: `transform 0.5s ${EASE_OUT}`,
         }}
       >
         <img
@@ -72,10 +84,13 @@ function FeatureCard({ feature: f }) {
             position: "absolute",
             top: "50%",
             right: "-6%",
-            transform: "translateY(-50%)",
+            transform: hov
+              ? "translateY(-50%) scale(1.06)"
+              : "translateY(-50%) scale(1)",
             width: "100%",
             height: "auto",
             opacity: 0.95,
+            transition: `transform 0.5s ${EASE_OUT}`,
           }}
         />
       </div>
@@ -84,11 +99,14 @@ function FeatureCard({ feature: f }) {
         style={{
           position: "relative",
           zIndex: 1,
-          padding: "clamp(26px,3vw,36px) clamp(24px,3vw,34px)",
+          padding: "clamp(26px,3vw,36px) clamp(24px,3vw,34px) 0",
           display: "flex",
           flexDirection: "column",
-          height: "100%",
+          flex: 1,
+          minHeight: 0,
           maxWidth: "60%",
+          transform: hov ? "translateY(-30px)" : "translateY(0)",
+          transition: `transform 0.35s ${EASE_OUT}`,
         }}
       >
         <span
@@ -106,7 +124,11 @@ function FeatureCard({ feature: f }) {
             border: `1px solid ${f.accent}35`,
             padding: "5px 12px",
             borderRadius: "999px",
-            marginBottom: "18px",
+            marginTop: "10px",
+            marginBottom: "8px",
+            transform: hov ? "scale(0.88)" : "scale(1)",
+            transformOrigin: "left center",
+            transition: `transform 0.3s ${EASE_OUT}`,
           }}
         >
           Feature
@@ -136,18 +158,54 @@ function FeatureCard({ feature: f }) {
         >
           {f.body}
         </p>
+      </div>
 
+      {/* CTA — sits right where the text block's bottom used to be; rises into place as the text block shifts up above it */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "0 clamp(24px,3vw,34px) clamp(26px,3vw,36px)",
+          marginTop: "-30px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          transform: hov ? "translateY(0)" : "translateY(14px)",
+          opacity: hov ? 1 : 0,
+          transition: `transform 0.35s ${EASE_OUT}, opacity 0.3s ${EASE_OUT}`,
+          pointerEvents: "none",
+        }}
+      >
         <span
           style={{
             fontFamily: "'DM Sans',sans-serif",
             fontSize: "0.82rem",
             fontWeight: 600,
             color: f.accent,
-            marginTop: "16px",
+            whiteSpace: "nowrap",
           }}
         >
-          Learn more →
+          Learn more
         </span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{
+            transform: hov ? "translateX(3px)" : "translateX(0)",
+            transition: `transform 0.3s ${EASE_OUT}`,
+            flexShrink: 0,
+          }}
+        >
+          <path
+            d="M3 8h10M9 4l4 4-4 4"
+            stroke={f.accent}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
     </div>
   );
@@ -157,6 +215,7 @@ export default function Features() {
   const features = [
     {
       illustration: "f1",
+      slug: "instant-qr-access",
       title: "Instant QR access",
       body: "One code per event. Guests tap and they're in — no redirect, no download, no friction.",
       accent: "#C98F87",
@@ -164,18 +223,21 @@ export default function Features() {
     },
     {
       illustration: "f2",
+      slug: "collaborative-albums",
       title: "Collaborative albums",
       body: "Unlimited contributors. Watch the gallery grow in real time throughout the event.",
       accent: "#B8905E",
     },
     {
       illustration: "f3",
+      slug: "private-by-default",
       title: "Private by default",
       body: "Access-controlled from day one. Only guests with your QR code or link can view anything.",
       accent: "#8DAA84",
     },
     {
       illustration: "f4",
+      slug: "hd-downloads",
       title: "HD downloads",
       body: "Original-quality downloads, always. Export individual photos or the full album as a ZIP.",
       accent: "#C98F87",

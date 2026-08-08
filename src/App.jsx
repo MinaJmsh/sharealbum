@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/LandingPage";
+import FeaturesDocs from "./pages/FeaturesDocs";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -129,6 +130,7 @@ function App() {
             }
           />
           <Route path="/reset-password" element={<ResetPassword />} />{" "}
+          <Route path="/features/:slug" element={<FeaturesDocs />} />
         </Routes>{" "}
         <ToastContainer
           position={toastPosition}

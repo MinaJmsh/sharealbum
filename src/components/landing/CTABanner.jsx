@@ -1,7 +1,20 @@
+import { useNavigate } from "react-router-dom";
 import { Reveal, ArrowRight, EASE_OUT } from "./LandingPageShared";
 import { ShineBorder } from "../../components/ui/shine-border";
+import { useAuth } from "../../context/AuthContext";
 
 export default function CTABanner() {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
+  const handleGetStartedClick = (e) => {
+    if (isLoggedIn) {
+      e.preventDefault();
+      navigate("/dashboard");
+    }
+    // else: default anchor behavior scrolls to #auth
+  };
+
   return (
     <section
       style={{
@@ -86,6 +99,7 @@ export default function CTABanner() {
           >
             <a
               href="#auth"
+              onClick={handleGetStartedClick}
               style={{
                 padding: "13px 28px",
                 borderRadius: "14px",
