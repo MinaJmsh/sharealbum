@@ -2,17 +2,27 @@ import { CameraIcon, QrIcon } from "./LandingPageShared";
 
 // Small wedding-aesthetic photo set for the phone mockup marquee.
 // Swap for real ShareAlbum ceremony photos when available.
-const MOCKUP_PHOTOS = [
-  "https://images.unsplash.com/photo-1519741497674-611481863552?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1470753937643-efeb931202a9?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=160&auto=format&fit=crop&q=60",
-  "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=160&auto=format&fit=crop&q=60",
-];
+// const MOCKUP_PHOTOS = [
+//   "https://images.unsplash.com/photo-1519741497674-611481863552?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1470753937643-efeb931202a9?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=160&auto=format&fit=crop&q=60",
+//   "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=160&auto=format&fit=crop&q=60",
+// ];
+// Auto-import all images from src/assets/images
+const imageModules = import.meta.glob(
+  "../../assets/images/*.{jpg,jpeg,png,webp}",
+  {
+    eager: true,
+    import: "default",
+  },
+);
+
+const MOCKUP_PHOTOS = Object.values(imageModules);
 
 function splitIntoColumns(items, columnCount) {
   const columns = Array.from({ length: columnCount }, () => []);
@@ -114,7 +124,7 @@ function PhotoMarqueeMini({ height = 320 }) {
           <MiniMarqueeColumn
             key={i}
             photos={col}
-            duration={35 + i * 3}
+            duration={60 + i * 3}
             reverse={i % 2 === 1}
           />
         ))}

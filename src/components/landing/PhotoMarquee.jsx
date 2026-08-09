@@ -6,20 +6,30 @@
 
 // Placeholder wedding/event photography — swap for real ShareAlbum
 // event photos (or Supabase Storage covers) when ready.
-const PHOTOS = [
-  "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1470753937643-efeb931202a9?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1550005809-91ad75fb315f?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1587271636175-90d58cdad458?w=400&auto=format&fit=crop&q=70",
-  "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&auto=format&fit=crop&q=70",
-];
+// const PHOTOS = [
+//   "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1470753937643-efeb931202a9?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1550005809-91ad75fb315f?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1587271636175-90d58cdad458?w=400&auto=format&fit=crop&q=70",
+//   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&auto=format&fit=crop&q=70",
+// ];
+// Auto-import all images from src/assets/images
+const imageModules = import.meta.glob(
+  "../../assets/images/*.{jpg,jpeg,png,webp}",
+  {
+    eager: true,
+    import: "default",
+  },
+);
+
+const PHOTOS = Object.values(imageModules);
 
 // Each column gets the FULL photo set, just rotated to a different starting
 // point so columns don't look identical. This guarantees every column has
@@ -146,7 +156,7 @@ export default function PhotoMarquee() {
           <MarqueeColumn
             key={i}
             photos={col}
-            duration={60}
+            duration={90}
             reverse={i % 2 === 1}
           />
         ))}
@@ -156,7 +166,7 @@ export default function PhotoMarquee() {
           <MarqueeColumn
             key={i}
             photos={col}
-            duration={65}
+            duration={100}
             reverse={i % 2 === 1}
           />
         ))}
@@ -166,7 +176,7 @@ export default function PhotoMarquee() {
           <MarqueeColumn
             key={i}
             photos={col}
-            duration={70}
+            duration={110}
             reverse={i % 2 === 1}
           />
         ))}
