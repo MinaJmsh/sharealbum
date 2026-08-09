@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { BubbleBackground } from "../components/animate-ui/components/backgrounds/bubble";
 import { notify } from "../lib/toast";
+import icon from "../assets/favicon.svg";
 
 // ── Icons ─────────────────────────────────────────────────────────
 const LogoIcon = () => (
@@ -101,6 +102,72 @@ const LogOutIcon = () => (
     <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
+const AlertTriangleIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+    />
+  </svg>
+);
+const CheckCircleIcon = () => (
+  <svg
+    className="w-7 h-7 text-sage-muted"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
+const TrashIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+    />
+  </svg>
+);
+const SpinnerIcon = () => (
+  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+  </svg>
+);
+
+// ── Storage path helper (matches MyEvent.jsx pattern) ──────────────
+function getStoragePath(url) {
+  if (!url) return null;
+  const marker = "/object/public/media/";
+  const idx = url.indexOf(marker);
+  return idx !== -1 ? decodeURIComponent(url.slice(idx + marker.length)) : null;
+}
 
 // ── Section card ──────────────────────────────────────────────────
 function Card({ title, children }) {
@@ -110,6 +177,152 @@ function Card({ title, children }) {
         {title}
       </h3>
       {children}
+    </div>
+  );
+}
+
+// ── Account deletion progress dialog ────────────────────────────────
+function DeletingAccountDialog({ status }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-text/10 backdrop-blur-sm" />
+      <div className="relative glass-lg w-full max-w-xs shadow-glass-lg p-8 flex flex-col items-center gap-4">
+        <SpinnerIcon />
+        <div className="text-center">
+          <p className="font-display text-lg font-light text-text-h">
+            Deleting your account
+          </p>
+          <p className="text-sm text-text-sm font-sans mt-1">{status}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Delete account confirmation dialog (mirrors DeleteEventDialog) ──
+function DeleteAccountDialog({ email, onConfirm, onCancel, loading, step }) {
+  const [confirmText, setConfirmText] = useState("");
+  const required = "DELETE";
+  const canConfirm = confirmText === required;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-text/20 backdrop-blur-md"
+        onClick={!loading ? onCancel : undefined}
+      />
+      <div className="relative glass-lg p-6 w-full max-w-sm shadow-glass-lg overflow-hidden">
+        <div className="h-1 bg-rose-300" />
+        <div className="pt-4">
+          {step === "warn" ? (
+            <>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-rose-400">
+                    <AlertTriangleIcon />
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-medium text-text-h font-display">
+                    Delete your account?
+                  </h3>
+                  <p className="text-sm text-text-sm font-sans mt-1 leading-relaxed">
+                    This will permanently delete{" "}
+                    <span className="font-medium text-text-h">{email}</span>,
+                    every event you own and their media, and every photo or
+                    video you've shared in other people's events. This cannot be
+                    undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancel}
+                  className="btn-secondary flex-1 justify-center text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm("proceed")}
+                  className="btn flex-1 justify-center text-sm bg-rose-400 text-white hover:bg-rose-500 active:scale-95 shadow-soft"
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-text-h font-display mb-1">
+                  Final confirmation
+                </h3>
+                <p className="text-sm text-text-sm font-sans mb-4">
+                  Type{" "}
+                  <span className="font-mono font-semibold text-rose-400 bg-rose-50 px-1 rounded">
+                    DELETE
+                  </span>{" "}
+                  to permanently remove your account and all associated data.
+                </p>
+                <input
+                  className="input"
+                  placeholder="Type DELETE to confirm"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={onCancel}
+                  disabled={loading}
+                  className="btn-secondary flex-1 justify-center text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm("delete")}
+                  disabled={!canConfirm || loading}
+                  className={`btn flex-1 justify-center text-sm shadow-soft transition-all ${canConfirm && !loading ? "bg-rose-500 text-white hover:bg-rose-600 active:scale-95" : "bg-rose-200 text-rose-300 cursor-not-allowed"}`}
+                >
+                  {loading ? <SpinnerIcon /> : "Delete forever"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Success dialog (mirrors DeleteEventSuccessDialog) ───────────────
+function DeleteAccountSuccessDialog({ onDone }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-text/20 backdrop-blur-md" />
+      <div className="relative glass-lg w-full max-w-sm shadow-glass-lg overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-sage-light via-accent to-pink-dust" />
+        <div className="px-6 pt-6 pb-8 flex flex-col items-center gap-5 text-center">
+          <div className="w-14 h-14 rounded-full bg-sage-light/30 border border-sage-light/50 flex items-center justify-center">
+            <CheckCircleIcon />
+          </div>
+          <div>
+            <h2 className="font-display text-2xl font-light text-text-h">
+              Account deleted
+            </h2>
+            <p className="text-sm text-text-sm font-sans mt-2 leading-relaxed">
+              Your account, your events, and everything you've shared have been
+              permanently removed. Take care.
+            </p>
+          </div>
+          <button
+            onClick={onDone}
+            className="btn-primary w-full justify-center gap-2"
+          >
+            Back to home
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -127,6 +340,12 @@ export default function Profile() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
+
+  // Account deletion state
+  const [deleteAccountStep, setDeleteAccountStep] = useState(null); // null | "warn" | "confirm"
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState("");
+  const [deleteAccountSuccess, setDeleteAccountSuccess] = useState(false);
 
   const email = session?.user?.email || "";
   const initials = email ? email.slice(0, 2).toUpperCase() : "ME";
@@ -197,6 +416,100 @@ export default function Profile() {
     }
   };
 
+  // ── Delete account ──────────────────────────────────────────────
+  async function handleDeleteAccount(action) {
+    if (action === "proceed") {
+      setDeleteAccountStep("confirm");
+      return;
+    }
+
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    setDeleteAccountLoading(true);
+    try {
+      // 1. Delete every event this user owns, plus its media + cover in storage
+      setDeleteStatus("Removing your events…");
+      const { data: ownedCeremonies, error: ownedErr } = await supabase
+        .from("ceremonies")
+        .select("id, cover_url")
+        .eq("owner_id", userId);
+      if (ownedErr) throw ownedErr;
+
+      if (ownedCeremonies && ownedCeremonies.length > 0) {
+        const ceremonyIds = ownedCeremonies.map((c) => c.id);
+
+        setDeleteStatus("Removing media from your events…");
+        const { data: ownedMedia, error: ownedMediaErr } = await supabase
+          .from("media")
+          .select("file_url")
+          .in("ceremony_id", ceremonyIds);
+        if (ownedMediaErr) throw ownedMediaErr;
+
+        if (ownedMedia && ownedMedia.length > 0) {
+          const paths = ownedMedia
+            .map((m) => getStoragePath(m.file_url))
+            .filter(Boolean);
+          for (let i = 0; i < paths.length; i += 100) {
+            await supabase.storage
+              .from("media")
+              .remove(paths.slice(i, i + 100));
+          }
+        }
+
+        const coverPaths = ownedCeremonies
+          .map((c) => getStoragePath(c.cover_url))
+          .filter(Boolean);
+        if (coverPaths.length > 0) {
+          await supabase.storage.from("media").remove(coverPaths);
+        }
+
+        await supabase.from("media").delete().in("ceremony_id", ceremonyIds);
+        await supabase.from("ceremonies").delete().in("id", ceremonyIds);
+      }
+
+      // 2. Delete media this user shared as a guest in other people's events
+      setDeleteStatus("Removing your shared photos and videos…");
+      const { data: guestMedia, error: guestMediaErr } = await supabase
+        .from("media")
+        .select("file_url")
+        .eq("uploader_id", userId);
+      if (guestMediaErr) throw guestMediaErr;
+
+      if (guestMedia && guestMedia.length > 0) {
+        const paths = guestMedia
+          .map((m) => getStoragePath(m.file_url))
+          .filter(Boolean);
+        for (let i = 0; i < paths.length; i += 100) {
+          await supabase.storage.from("media").remove(paths.slice(i, i + 100));
+        }
+        await supabase.from("media").delete().eq("uploader_id", userId);
+      }
+
+      // 3. Delete the auth user itself via edge function (needs service role)
+      setDeleteStatus("Deleting your account…");
+      const { error: fnErr } =
+        await supabase.functions.invoke("delete-account");
+      if (fnErr) throw fnErr;
+
+      await supabase.auth.signOut();
+      notify.success(
+        "Account deleted",
+        "Your account and all your data have been removed.",
+      );
+      setDeleteAccountStep(null);
+      setDeleteAccountSuccess(true);
+    } catch (e) {
+      notify.error(
+        "Couldn't delete account",
+        e?.message ?? "Please try again.",
+      );
+      setDeleteAccountStep(null);
+    } finally {
+      setDeleteAccountLoading(false);
+    }
+  }
+
   const pwStrength = (pw) => {
     if (!pw) return null;
     if (pw.length < 6)
@@ -211,6 +524,24 @@ export default function Profile() {
 
   return (
     <div className="min-h-svh relative">
+      {deleteAccountStep && (
+        <DeleteAccountDialog
+          email={email}
+          step={deleteAccountStep}
+          onConfirm={handleDeleteAccount}
+          onCancel={() => {
+            if (!deleteAccountLoading) setDeleteAccountStep(null);
+          }}
+          loading={deleteAccountLoading}
+        />
+      )}
+      {deleteAccountLoading && <DeletingAccountDialog status={deleteStatus} />}
+      {deleteAccountSuccess && (
+        <DeleteAccountSuccessDialog
+          onDone={() => navigate("/", { replace: true })}
+        />
+      )}
+
       <BubbleBackground
         interactive
         colors={{
@@ -236,7 +567,16 @@ export default function Profile() {
               to="/"
               className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
             >
-              <LogoIcon />
+              <img
+                src={icon}
+                alt="ShareAlbum"
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  flexShrink: 0,
+                  objectFit: "contain",
+                }}
+              />{" "}
               <span className="font-display text-lg font-light text-text-h tracking-wide">
                 ShareAlbum
               </span>
@@ -374,6 +714,27 @@ export default function Profile() {
                 </button>
               </div>
             </Card>
+
+            {/* ── Danger zone ──────────────────────────────── */}
+            <div className="glass rounded-2xl p-6 flex flex-col gap-3 border border-rose-200/50">
+              <div>
+                <h3 className="font-display text-lg font-medium text-rose-400 border-b border-rose-200/40 pb-3 mb-0.5">
+                  Danger zone
+                </h3>
+                <p className="text-xs text-text-sm font-sans mt-3">
+                  Deleting your account is permanent. Every event you own, all
+                  of its media, and every photo or video you've shared in other
+                  people's events will be permanently removed.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeleteAccountStep("warn")}
+                className="btn flex items-center gap-2 text-sm text-rose-400 border border-rose-200/60 bg-rose-50/30 hover:bg-rose-50/60 hover:border-rose-300 active:scale-95 transition-all self-start"
+              >
+                <TrashIcon />
+                Delete my account
+              </button>
+            </div>
 
             {/* ── Sign out — subtle row, no heavy card ── */}
             <div className="flex items-center justify-between px-2 py-1">

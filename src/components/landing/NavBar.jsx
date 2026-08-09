@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { EASE_OUT, ImageIcon } from "./LandingPageShared";
 import { useAuth } from "../../context/AuthContext";
 import ProfileMenu from "../common/ProfileMenu";
+import icon from "../../assets/favicon.svg";
 
 function AvatarTrigger({ user, onClick }) {
   const initials = user?.user_metadata?.display_name
@@ -81,21 +82,16 @@ export default function Navbar() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
+          <img
+            src={icon}
+            alt="ShareAlbum"
             style={{
               width: "34px",
               height: "34px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg,#C9A87C,#C98F87)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(201,168,124,0.35)",
               flexShrink: 0,
+              objectFit: "contain",
             }}
-          >
-            <ImageIcon size={16} />
-          </div>
+          />
           <span
             style={{
               fontFamily: "'Cormorant Garamond',Georgia,serif",

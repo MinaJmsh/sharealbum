@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import Loader from "../components/common/Loader";
 import { createPortal } from "react-dom";
 import noevent from "../assets/illustrations/noevent.svg";
+import icon from "../assets/favicon.svg";
 
 // ── Icons ────────────────────────────────────────────────────────
 const GridIcon = () => (
@@ -655,7 +656,16 @@ export default function Dashboard() {
               to="/"
               className="flex items-center gap-2 no-underline hover:opacity-80 transition-opacity"
             >
-              <LogoIcon />
+              <img
+                src={icon}
+                alt="ShareAlbum"
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  flexShrink: 0,
+                  objectFit: "contain",
+                }}
+              />{" "}
               <span className="font-display text-lg font-light text-text-h tracking-wide">
                 ShareAlbum
               </span>
