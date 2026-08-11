@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Reveal, EyeIcon, EASE_OUT } from "./LandingPageShared";
 import PhotoMarquee from "./PhotoMarquee";
+import { supabase } from "../../supabaseClient";
+import { notify } from "../../lib/toast";
 
 function pwStrength(pw) {
   if (!pw) return 0;
@@ -13,13 +16,14 @@ function pwStrength(pw) {
 }
 
 export default function AuthSection() {
+  const navigate = useNavigate();
+
   const [tab, setTab] = useState("signup");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPass, setShowLoginPass] = useState(false);
-  const [showForgot, setShowForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotSent, setForgotSent] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+
   const [name, setName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
@@ -27,6 +31,7 @@ export default function AuthSection() {
   const [showSignupPass, setShowSignupPass] = useState(false);
   const [signupDone, setSignupDone] = useState(false);
   const [signupError, setSignupError] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
 
   // Track the form column's real rendered height so the marquee next to it
   // gets an explicit pixel height instead of an unreliable 100% (which
@@ -49,7 +54,7 @@ export default function AuthSection() {
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [showForgot, signupDone, tab]);
+  }, [signupDone, tab]);
 
   const strength = pwStrength(signupPassword);
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][strength];
@@ -91,6 +96,85 @@ export default function AuthSection() {
     e.target.style.boxShadow = "none";
   }
 
+  // ── Real auth handlers (mirrors Login.jsx / Signup.jsx) ─────────
+  async function handleLogin() {
+    if (!loginEmail || !loginPassword) {
+      notify.warning("Missing info", "Enter your email and password.");
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+      if (error) {
+        notify.error("Sign in failed", error.message);
+      } else {
+        notify.success("Welcome back", "You're signed in.");
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleSignup() {
+    if (signupPassword.length < 8) {
+      setSignupError("Password must be at least 8 characters.");
+      return;
+    }
+    if (signupPassword !== confirmPassword) {
+      setSignupError("Passwords don't match.");
+      return;
+    }
+    setSignupError("");
+    setSignupLoading(true);
+    try {
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: { display_name: name.trim() },
+        },
+      });
+      if (error) {
+        setSignupError(error.message);
+        notify.error("Couldn't create account", error.message);
+      } else if (authData?.user?.identities?.length === 0) {
+        // Supabase doesn't return an error for an already-registered email —
+        // it silently returns a user with no identities instead, so we have
+        // to detect that case ourselves (same as Signup.jsx).
+        const msg =
+          "An account with this email already exists. Try signing in instead.";
+        setSignupError(msg);
+        notify.error("Account already exists", msg);
+      } else {
+        setSignupDone(true);
+        notify.success(
+          "Account created",
+          "Check your email to confirm your account.",
+        );
+      }
+    } catch (err) {
+      notify.error(
+        "Connection problem",
+        "Couldn't reach the server. Check your internet connection and try again.",
+      );
+    } finally {
+      setSignupLoading(false);
+    }
+  }
+
+  function goToForgotPassword() {
+    navigate("/login", { state: { showForgot: true } });
+  }
+
   const sectionStyle = {
     padding: "clamp(64px,10vw,120px) 24px",
     background: "#FAF7F2",
@@ -121,186 +205,6 @@ export default function AuthSection() {
       <PhotoMarquee />
     </div>
   );
-
-  if (showForgot) {
-    return (
-      <section id="auth" style={sectionStyle}>
-        <div style={shellStyle} className="auth-shell">
-          <AuthIllustration />
-          <div style={formColStyle} ref={formRef}>
-            <Reveal>
-              <button
-                onClick={() => {
-                  setShowForgot(false);
-                  setForgotSent(false);
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.875rem",
-                  color: "#9A8F85",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "0",
-                  marginBottom: "32px",
-                  fontFamily: "'DM Sans',sans-serif",
-                  transition: `color 0.18s ${EASE_OUT}`,
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#5C5148")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#9A8F85")}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                >
-                  <line x1="19" y1="12" x2="5" y2="12" />
-                  <polyline points="12 19 5 12 12 5" />
-                </svg>
-                Back to sign in
-              </button>
-              <div style={{ marginBottom: "32px" }}>
-                <h2
-                  style={{
-                    fontFamily: "'Cormorant Garamond',serif",
-                    fontSize: "2.4rem",
-                    fontWeight: 600,
-                    color: "#2E2520",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Reset password
-                </h2>
-                <p
-                  style={{
-                    fontFamily: "'DM Sans',sans-serif",
-                    fontSize: "0.875rem",
-                    color: "#9A8F85",
-                  }}
-                >
-                  Enter your email and we'll send you a reset link.
-                </p>
-              </div>
-              <div>
-                {forgotSent ? (
-                  <div style={{ textAlign: "center" }}>
-                    <div
-                      style={{
-                        width: "52px",
-                        height: "52px",
-                        borderRadius: "50%",
-                        background: "rgba(200,213,192,0.35)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 16px",
-                      }}
-                    >
-                      <svg
-                        width="22"
-                        height="22"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#8DAA84"
-                        strokeWidth="2.5"
-                      >
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
-                    </div>
-                    <p
-                      style={{
-                        fontFamily: "'DM Sans',sans-serif",
-                        fontSize: "0.9rem",
-                        color: "#5C5148",
-                        lineHeight: 1.6,
-                        marginBottom: "20px",
-                      }}
-                    >
-                      We sent a reset link to{" "}
-                      <strong style={{ color: "#2E2520" }}>
-                        {forgotEmail}
-                      </strong>
-                      . It may take a minute to arrive.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setShowForgot(false);
-                        setForgotSent(false);
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "12px",
-                        borderRadius: "12px",
-                        border: "none",
-                        background: "linear-gradient(135deg,#C9A87C,#B8905E)",
-                        color: "white",
-                        fontFamily: "'DM Sans',sans-serif",
-                        fontSize: "0.9rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Back to sign in
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "16px",
-                    }}
-                  >
-                    <div>
-                      <label style={labelStyle}>Email</label>
-                      <input
-                        type="email"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        placeholder="you@example.com"
-                        style={inputStyle}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
-                      />
-                    </div>
-                    <button
-                      onClick={() => setForgotSent(true)}
-                      style={{
-                        width: "100%",
-                        padding: "13px",
-                        borderRadius: "12px",
-                        border: "none",
-                        background: "linear-gradient(135deg,#C9A87C,#B8905E)",
-                        color: "white",
-                        fontFamily: "'DM Sans',sans-serif",
-                        fontSize: "0.9rem",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        boxShadow: "0 4px 20px rgba(201,168,124,0.4)",
-                      }}
-                    >
-                      Send reset link
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Reveal>
-          </div>
-        </div>
-        <style>{`
-          @media (max-width: 860px) {
-            .auth-shell { grid-template-columns: 1fr !important; }
-          }
-        `}</style>
-      </section>
-    );
-  }
 
   if (signupDone) {
     return (
@@ -358,10 +262,7 @@ export default function AuthSection() {
                   Click it to activate your account, then come back to sign in.
                 </p>
                 <button
-                  onClick={() => {
-                    setSignupDone(false);
-                    setTab("login");
-                  }}
+                  onClick={() => navigate("/login")}
                   style={{
                     padding: "13px 32px",
                     borderRadius: "13px",
@@ -472,7 +373,11 @@ export default function AuthSection() {
               </div>
 
               {tab === "login" && (
-                <div
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleLogin();
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -505,7 +410,7 @@ export default function AuthSection() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => setShowForgot(true)}
+                        onClick={goToForgotPassword}
                         style={{
                           fontSize: "0.75rem",
                           color: "#C9A87C",
@@ -550,6 +455,8 @@ export default function AuthSection() {
                     </div>
                   </div>
                   <button
+                    type="submit"
+                    disabled={loginLoading}
                     style={{
                       width: "100%",
                       padding: "13px",
@@ -560,12 +467,14 @@ export default function AuthSection() {
                       fontFamily: "'DM Sans',sans-serif",
                       fontSize: "0.9rem",
                       fontWeight: 500,
-                      cursor: "pointer",
+                      cursor: loginLoading ? "default" : "pointer",
+                      opacity: loginLoading ? 0.7 : 1,
                       boxShadow: "0 4px 20px rgba(201,168,124,0.45)",
                       marginTop: "4px",
                       transition: `transform 0.18s ${EASE_OUT}, box-shadow 0.18s ${EASE_OUT}`,
                     }}
                     onMouseEnter={(e) => {
+                      if (loginLoading) return;
                       e.currentTarget.style.boxShadow =
                         "0 8px 28px rgba(201,168,124,0.6)";
                       e.currentTarget.style.transform = "translateY(-1px)";
@@ -576,13 +485,15 @@ export default function AuthSection() {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                     onMouseDown={(e) =>
+                      !loginLoading &&
                       (e.currentTarget.style.transform = "scale(0.98)")
                     }
                     onMouseUp={(e) =>
+                      !loginLoading &&
                       (e.currentTarget.style.transform = "translateY(-1px)")
                     }
                   >
-                    Sign in
+                    {loginLoading ? "Signing in…" : "Sign in"}
                   </button>
                   <p
                     style={{
@@ -595,6 +506,7 @@ export default function AuthSection() {
                   >
                     Don't have an account?{" "}
                     <button
+                      type="button"
                       onClick={() => setTab("signup")}
                       style={{
                         color: "#C9A87C",
@@ -610,11 +522,15 @@ export default function AuthSection() {
                       Sign up free
                     </button>
                   </p>
-                </div>
+                </form>
               )}
 
               {tab === "signup" && (
-                <div
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSignup();
+                  }}
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -790,20 +706,8 @@ export default function AuthSection() {
                   </div>
 
                   <button
-                    onClick={() => {
-                      if (signupPassword.length < 8) {
-                        setSignupError(
-                          "Password must be at least 8 characters.",
-                        );
-                        return;
-                      }
-                      if (signupPassword !== confirmPassword) {
-                        setSignupError("Passwords don't match.");
-                        return;
-                      }
-                      setSignupError("");
-                      setSignupDone(true);
-                    }}
+                    type="submit"
+                    disabled={signupLoading}
                     style={{
                       width: "100%",
                       padding: "13px",
@@ -814,12 +718,14 @@ export default function AuthSection() {
                       fontFamily: "'DM Sans',sans-serif",
                       fontSize: "0.9rem",
                       fontWeight: 500,
-                      cursor: "pointer",
+                      cursor: signupLoading ? "default" : "pointer",
+                      opacity: signupLoading ? 0.7 : 1,
                       boxShadow: "0 4px 20px rgba(201,168,124,0.45)",
                       marginTop: "4px",
                       transition: `transform 0.18s ${EASE_OUT}, box-shadow 0.18s ${EASE_OUT}`,
                     }}
                     onMouseEnter={(e) => {
+                      if (signupLoading) return;
                       e.currentTarget.style.boxShadow =
                         "0 8px 28px rgba(201,168,124,0.6)";
                       e.currentTarget.style.transform = "translateY(-1px)";
@@ -830,13 +736,15 @@ export default function AuthSection() {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                     onMouseDown={(e) =>
+                      !signupLoading &&
                       (e.currentTarget.style.transform = "scale(0.98)")
                     }
                     onMouseUp={(e) =>
+                      !signupLoading &&
                       (e.currentTarget.style.transform = "translateY(-1px)")
                     }
                   >
-                    Create account
+                    {signupLoading ? "Creating account…" : "Create account"}
                   </button>
                   <p
                     style={{
@@ -849,6 +757,7 @@ export default function AuthSection() {
                   >
                     Already have an account?{" "}
                     <button
+                      type="button"
                       onClick={() => setTab("login")}
                       style={{
                         color: "#C9A87C",
@@ -864,7 +773,7 @@ export default function AuthSection() {
                       Log in
                     </button>
                   </p>
-                </div>
+                </form>
               )}
             </div>
           </Reveal>

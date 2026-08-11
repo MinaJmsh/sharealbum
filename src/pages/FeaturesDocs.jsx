@@ -15,7 +15,7 @@ const NAV_GROUPS = [
         summary: "One code, no friction.",
         body: [
           "Every event gets a single QR code the moment you create it. Print it on a table card, add it to your invitations, or display it on a screen at the venue — guests just point their phone camera at it.",
-          "There's no app to download and no account required to view or upload. Scanning the code opens the album directly in the guest's browser, and if they want to contribute, they're uploading within seconds of arriving.",
+          "There's no app to download and no account required to view. Scanning the code opens the album directly in the guest's browser, and if they want to contribute, they're uploading within seconds of arriving.",
           "The same code works for the entire lifetime of the event. You can reprint it, share the link separately, or resend it after the event if guests want to add photos they took later.",
         ],
       },
@@ -25,8 +25,7 @@ const NAV_GROUPS = [
         accent: "#B8905E",
         summary: "Every guest, one shared gallery.",
         body: [
-          "Anyone with the QR code or link can add photos and videos to the album — there's no cap on contributors, so the gallery grows as fast as your guests take pictures.",
-          "Uploads appear in the album in real time, so if you pull it up during the event, you'll see new memories landing as they're captured, not just after the fact.",
+          "Anyone with the QR code or link can add photos and videos to the album — There is currently no contributor limit imposed by ShareAlbum, so the gallery grows as fast as your guests take pictures.",
           "Because everyone is uploading to the same shared space, you end up with angles, moments, and candid shots no single photographer could catch alone.",
         ],
       },
@@ -34,22 +33,22 @@ const NAV_GROUPS = [
         slug: "private-by-default",
         title: "Private by default",
         accent: "#8DAA84",
-        summary: "Access is controlled from the start.",
+        summary: "Your album stays away from public discovery.",
         body: [
-          "Albums are never publicly listed or searchable. The only way in is the QR code or the direct link you choose to share, so access is limited to the people you actually invite.",
-          "As the event owner, you're always in control of who has the link and can revisit that at any time.",
-          "There's no ad network or third party involved in viewing your guests' photos — the album exists for your event and the people you shared it with, and nothing else.",
+          "Albums aren't publicly listed or searchable. Guests access them through the event's QR code or a private link shared by the event owner.",
+          "As the event owner, you control who you share the QR code or link with and can manage the album's content.",
+          "ShareAlbum keeps your event photos focused on the people you choose to share them with — no public gallery, no social feed, and no unnecessary exposure.",
         ],
       },
       {
-        slug: "hd-downloads",
-        title: "HD downloads",
+        slug: "original-quality",
+        title: "Original-quality downloads",
         accent: "#C98F87",
         summary: "Full quality, every time.",
         body: [
-          "Photos and videos are stored and served at their original resolution — there's no compression step that quietly degrades quality for the sake of saving space.",
-          "You can download any individual photo at full size, or export the entire album as a single ZIP file once the event wraps up.",
-          "This makes the album a genuine archive, not just a preview — it's the same quality you'd get from the guest's camera roll.",
+          "Photos are stored in their original uploaded file quality, so you can keep the memories exactly as they were shared.",
+          "Download individual photos at full size, or export the entire album as a single ZIP file whenever you want.",
+          "Whether you're saving a favorite moment or keeping the whole collection, your album is yours to download and keep.",
         ],
       },
     ],
@@ -65,7 +64,7 @@ const NAV_GROUPS = [
         body: [
           "Create an account, then set up an event with a name and, optionally, a cover photo. ShareAlbum generates a QR code for it automatically.",
           "Share the QR code however suits your event — printed on a card, displayed on a sign, or sent as a link in a group chat or invitation.",
-          "Guests scan or click through to the album, where they can view what's already been shared and add their own photos and videos, no account needed on their end.",
+          "Guests scan or click through to the album, where they can view what's already been shared and add their own photos and videos.",
           "You can return to your album at any time to browse, download individual files, or export everything as a ZIP.",
         ],
       },
@@ -77,19 +76,19 @@ const NAV_GROUPS = [
         faq: [
           {
             q: "Do guests need an account?",
-            a: "No. Viewing and uploading only require the QR code or link — an account is only needed to create and manage an event.",
+            a: "Guests can view the album without an account. To upload photos, they need to create an account and sign in.",
           },
           {
             q: "Is there a limit on how many photos can be uploaded?",
-            a: "No cap is placed on the number of contributors or uploads to an album.",
+            a: "There is currently no upload limit set by ShareAlbum, so guests can contribute throughout the event.",
           },
           {
             q: "Can I remove a photo someone else uploaded?",
-            a: "As the event owner, you have management access over the album's contents.",
+            a: "Yes. As the event owner, you can manage the album and remove photos that have been uploaded by guests.",
           },
           {
             q: "What happens to the album after the event?",
-            a: "It stays exactly as it is — you can keep browsing, downloading, or exporting it whenever you like.",
+            a: "The album stays available after the event, so you can continue browsing, downloading, and exporting your photos whenever you like.",
           },
         ],
       },

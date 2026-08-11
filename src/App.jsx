@@ -40,6 +40,7 @@ function PageTitle() {
     else if (pathname.includes("/manage")) title = "Manage Event • ShareAlbum";
     else if (pathname.includes("/my-media")) title = "My Media • ShareAlbum";
     else if (pathname.startsWith("/ceremony/")) title = "Gallery • ShareAlbum";
+    else if (pathname.startsWith("/features")) title = "Features • ShareAlbum";
     else title = "Page Not Found • ShareAlbum";
 
     document.title = title;

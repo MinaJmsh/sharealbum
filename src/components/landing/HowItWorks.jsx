@@ -15,12 +15,13 @@ const STEPS = [
   },
   {
     num: "02",
-    title: "Capture & upload",
-    body: "Open the camera directly in the gallery. Photos appear in the shared album the moment they're taken.",
+    title: "Choose & upload",
+    body: "Select your favorite photos from your gallery and upload them straight to the shared album. Everyone sees them instantly.",
     accent: "#C98F87",
     tag: "Instant sharing",
     svg: Step2SVG,
   },
+
   {
     num: "03",
     title: "Keep every memory",
