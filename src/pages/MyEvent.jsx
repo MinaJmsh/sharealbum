@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import Loader from "../components/common/Loader";
 import ProfileMenu from "../components/common/ProfileMenu";
+import { notify } from "../lib/toast";
 
 function getStoragePath(url) {
   const marker = "/object/public/media/";
@@ -86,7 +87,7 @@ function QRSheet({ ceremony, onClose }) {
       } catch {}
     }
     await navigator.clipboard.writeText(qrUrl);
-    alert("Link copied to clipboard!");
+    notify.success("Link copied", "QR link copied to clipboard.");
   }
 
   return (
@@ -709,7 +710,7 @@ export default function MyEvent() {
   const [deleteEventStep, setDeleteEventStep] = useState(null); // null | "warn" | "confirm"
   const [deleteEventLoading, setDeleteEventLoading] = useState(false);
   const [deleteEventSuccess, setDeleteEventSuccess] = useState(false);
-  const [error, setError] = useState(null);
+  // const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [showDiscard, setShowDiscard] = useState(false);
   const [pendingNav, setPendingNav] = useState(null);
@@ -821,10 +822,9 @@ export default function MyEvent() {
 
   async function handleSave() {
     if (!name.trim()) {
-      setError("Event name cannot be empty.");
+      notify.warning("Name required", "Event name cannot be empty.");
       return;
     }
-    setError(null);
     setSaving(true);
     setSaveStatus("Saving changes…");
     try {
@@ -855,7 +855,6 @@ export default function MyEvent() {
       setCoverFile(null);
       setSaving(false);
 
-      // Upload new media files if any
       if (newMediaFiles.length > 0) {
         setUploadingMedia(true);
         setUploadProgress({ current: 0, total: newMediaFiles.length });
@@ -890,8 +889,12 @@ export default function MyEvent() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      notify.success("Event updated", "Your changes have been saved.");
     } catch (e) {
-      setError(e?.message ?? "Failed to save. Please try again.");
+      notify.error(
+        "Couldn't save changes",
+        e?.message ?? "Failed to save. Please try again.",
+      );
       setSaving(false);
       setUploadingMedia(false);
     }
@@ -906,8 +909,9 @@ export default function MyEvent() {
       await supabase.from("media").delete().eq("id", toDelete.id);
       setMedia((prev) => prev.filter((m) => m.id !== toDelete.id));
       setToDelete(null);
+      notify.success("Media deleted", "The file has been removed.");
     } catch {
-      setError("Failed to delete media.");
+      notify.error("Couldn't delete", "Failed to delete media.");
       setToDelete(null);
     } finally {
       setDeleteLoading(false);
@@ -947,7 +951,10 @@ export default function MyEvent() {
       setDeleteEventStep(null);
       setDeleteEventSuccess(true);
     } catch (e) {
-      setError(e?.message ?? "Failed to delete event. Please try again.");
+      notify.error(
+        "Couldn't delete event",
+        e?.message ?? "Failed to delete event. Please try again.",
+      );
       setDeleteEventStep(null);
     } finally {
       setDeleteEventLoading(false);
@@ -1075,28 +1082,6 @@ export default function MyEvent() {
       </header>
 
       <main className="page pt-6 pb-28 max-w-2xl">
-        {error && (
-          <div className="mb-5 px-4 py-3 rounded-xl bg-rose-50/60 border border-rose-200/50 text-sm text-rose-500 font-sans flex items-center gap-2">
-            <svg
-              className="w-4 h-4 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-              />
-            </svg>
-            {error}
-            <button onClick={() => setError(null)} className="ml-auto">
-              ×
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex flex-col gap-7">
             {[1, 2, 3].map((i) => (
